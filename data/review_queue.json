@@ -8,6 +8,8 @@
     "keys": [
       "ruledOut"
     ],
-    "note": "denial/downgrade — confirm before applying"
+    "note": "denial/downgrade — confirm before applying",
+    "rid": "5d0e43385abd",
+    "kind": "denial"
   }
 ]
