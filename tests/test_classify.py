@@ -53,3 +53,25 @@ def test_confidence_gated_by_source():
     weak = classify_item(item("X files statement of candidacy", source="Some Blog"), WATCH)
     assert weak.confidence == "Low"          # unknown source capped low
     assert strong.confidence == "Very high"  # Reuters + strong signal
+
+
+# ---- false-positive regressions: bare "announces"/"launches" must NOT declare ----
+# These are the exact cases seen live on the board (Landrieu #2 "Declared", Yang
+# "Declared"): a non-candidacy announce/launch tripped the declared rule. The
+# declared verb must be anchored to a candidacy noun.
+
+def test_announces_non_candidacy_is_not_declared():
+    c = classify_item(item("Mitch Landrieu announces new infrastructure tour"), WATCH)
+    assert c is None or "declared" not in c.keys
+
+def test_launches_non_candidacy_is_not_declared():
+    c = classify_item(item("Andrew Yang launches a mobile network for families"), WATCH)
+    assert c is None or "declared" not in c.keys
+
+def test_real_campaign_launch_still_declares():
+    c = classify_item(item("Mitch Landrieu launches 2028 presidential campaign"), WATCH)
+    assert "declared" in c.keys                     # genuine declaration still fires
+
+def test_files_statement_still_declares():
+    c = classify_item(item("Andrew Yang files statement of candidacy with the FEC"), WATCH)
+    assert "declared" in c.keys

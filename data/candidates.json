@@ -296,8 +296,7 @@
     "bucket": "considering",
     "keys": [
       "earlyState",
-      "donors",
-      "declared"
+      "donors"
     ],
     "conf": "Medium",
     "delta": 0,
@@ -565,8 +564,7 @@
     "bucket": "soft",
     "keys": [
       "softConsidering",
-      "mediaBlitz",
-      "declared"
+      "mediaBlitz"
     ],
     "conf": "Low",
     "delta": 0,
