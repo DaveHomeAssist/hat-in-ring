@@ -10,6 +10,7 @@ Node smoke check.
 Skipped automatically if Node isn't on PATH (it is on GitHub Actions runners).
 """
 from __future__ import annotations
+import re
 import shutil
 import subprocess
 from datetime import date
@@ -50,12 +51,16 @@ def test_dashboard_smoke_catches_a_broken_build(tmp_path):
     out = tmp_path / "index.html"
     render(ROOT / "data" / "seed.json", ROOT / "templates", out, built=date(2026, 6, 13))
     html = out.read_text()
-    # Re-introduce the original bug: PREFS that misses keys on first visit.
-    broken = html.replace(
-        "let PREFS=Object.assign({view:'board',party:[],bucket:'',conf:'',q:'',sort:'score',dir:'desc'},DB.prefs||{});",
-        "let PREFS=DB.prefs||{view:'board',party:[],bucket:'',conf:'',q:'',sort:'score',dir:'desc'};",
+    # Re-introduce the original bug: PREFS via `DB.prefs || {defaults}` instead of
+    # Object.assign, so an empty saved object skips the defaults on first visit and
+    # PREFS.party is undefined -> filtered() throws. Regex-match so this survives
+    # future additions to the defaults object (e.g. the `quick` key).
+    broken, n = re.subn(
+        r"let PREFS=Object\.assign\((\{[^}]*\}),DB\.prefs\|\|\{\}\);",
+        r"let PREFS=DB.prefs||\1;",
+        html, count=1,
     )
-    assert broken != html, "expected to find the PREFS line to corrupt"
+    assert n == 1, "expected to find the PREFS Object.assign line to corrupt"
     bad = tmp_path / "broken.html"
     bad.write_text(broken)
 

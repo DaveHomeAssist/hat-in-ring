@@ -146,6 +146,35 @@ footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-si
 .kind.fec{background:#ece7ff;color:#5a3fb0}
 .reviewEmpty{color:var(--muted);text-align:center;padding:26px 0;font-size:13px}
 .reviewActions{margin-top:6px;display:flex;align-items:center;gap:10px}
+/* ---- anticipatory UX + microinteractions ---- */
+:root{--ease-out:cubic-bezier(.2,0,.2,1);--ease-standard:cubic-bezier(.4,0,.2,1)}
+@media (prefers-reduced-motion: no-preference){
+  .btn,.seg button,.chip,.qchip{transition:transform .12s var(--ease-out),background .12s var(--ease-out),box-shadow .12s var(--ease-out)}
+  .btn:active,.seg button:active,.chip:active,.qchip:active{transform:scale(.97)}
+  tr.row{transition:background .12s var(--ease-out)}
+  .pop{animation:pop .15s var(--ease-out)} @keyframes pop{50%{transform:scale(1.06)}}
+  .shake{animation:shake .18s ease-in-out} @keyframes shake{10%,90%{transform:translateX(-4px)}30%,70%{transform:translateX(4px)}50%{transform:translateX(-2px)}}
+  .flash{animation:flash .6s var(--ease-out)} @keyframes flash{from{background:#dff5e6}to{background:transparent}}
+  .fadein{animation:fadein .14s var(--ease-out)} @keyframes fadein{from{opacity:0}}
+  th.sorted::after{display:inline-block;transition:transform .12s var(--ease-out)}
+}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(8px);background:var(--ink);color:#fff;
+  font-size:13px;padding:9px 16px;border-radius:9px;box-shadow:0 4px 14px rgba(0,0,0,.18);opacity:0;pointer-events:none;
+  z-index:60;transition:opacity .16s var(--ease-out),transform .16s var(--ease-out)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--bad)}
+.f-err{outline:2px solid var(--bad);outline-offset:1px;border-radius:8px}
+.segbadge.alt{background:var(--good)}
+.newdot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--good);margin-left:6px;vertical-align:1px}
+.quickbar{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 12px}
+.qchip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--muted);user-select:none;min-height:30px}
+.qchip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.qchip .qn{opacity:.65;margin-left:5px;font-variant-numeric:tabular-nums}
+.nudge{display:flex;align-items:center;gap:10px;background:#eef5ff;border:1px solid #d4e3fb;color:#274b78;
+  border-radius:10px;padding:9px 13px;margin-bottom:14px;font-size:12.5px}
+.nudge .x{cursor:pointer;color:#274b78;opacity:.6;font-size:16px;line-height:1}
+.resetlink{cursor:pointer;color:var(--muted);text-decoration:underline}
 </style>
 </head>
 <body>
@@ -163,9 +192,10 @@ footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-si
   </header>
 
   <div class="stats" id="stats"></div>
+  <div class="nudge hide" id="nudge"></div>
 
   <div class="toolbar">
-    <div class="grow"><input type="search" id="q" placeholder="Search name or role…"></div>
+    <div class="grow"><input type="search" id="q" list="qhints" placeholder="Search name or role…" autocomplete="off"><datalist id="qhints"></datalist></div>
     <div class="chips" id="partyChips"></div>
     <select id="bucketSel" title="Seriousness bucket">
       <option value="">All buckets</option>
@@ -182,13 +212,15 @@ footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-si
       <option value="1">Hide noise</option>
     </select>
     <div class="seg" id="viewSeg">
-      <button data-view="board" class="on">Leaderboard</button>
+      <button data-view="board" class="on">Leaderboard <span class="segbadge alt" id="moversCount" title="movers"></span></button>
       <button data-view="cards">Cards</button>
       <button data-view="review">Review <span class="segbadge" id="reviewCount"></span></button>
     </div>
     <button class="btn" id="addBtn">+ Add</button>
     <button class="btn" id="exportBtn" title="Download data as JSON">Export</button>
   </div>
+
+  <div class="quickbar" id="quickbar"></div>
 
   <div class="layout">
     <div>
@@ -237,6 +269,7 @@ footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-si
 <!-- drawer -->
 <div class="scrim" id="scrim"></div>
 <div class="drawer" id="drawer"><div id="drawerInner"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 const GENERATED_AT = {{ generated_at }};   // build timestamp (drives recency maths)
@@ -336,14 +369,37 @@ let DB=load();
 // so `DB.prefs || {defaults}` would skip the defaults on first visit and leave
 // PREFS.party undefined → filtered() crashes the whole board. Object.assign guarantees
 // every key (party array, sort, dir…) always exists.
-let PREFS=Object.assign({view:'board',party:[],bucket:'',conf:'',q:'',sort:'score',dir:'desc'},DB.prefs||{});
+let PREFS=Object.assign({view:'board',party:[],bucket:'',conf:'',q:'',sort:'score',dir:'desc',quick:''},DB.prefs||{});
 
 /* ---------- review-queue decisions (local until exported) ---------- */
 const RLS='hatInRing_reviewDecisions_v1';
 function loadDecisions(){ try{return JSON.parse(localStorage.getItem(RLS))||{};}catch(e){return {};} }
 let DECISIONS=loadDecisions();                 // { rid: 'confirm' | 'dismiss' }
 function saveDecisions(){ try{localStorage.setItem(RLS,JSON.stringify(DECISIONS));}catch(e){} }
-function decide(rid,action){ DECISIONS[rid]=action; saveDecisions(); renderReview(); }
+function decide(rid,action){ DECISIONS[rid]=action; saveDecisions(); renderReview(); toast(action==='confirm'?'Confirmed — export to apply':'Dismissed'); }
+
+/* ---------- anticipatory UX state + microinteraction helpers (device-local, privacy-aware) ---------- */
+const UXLS='hatInRing_ux_v1';
+function loadUX(){try{return Object.assign({lastSeenVer:'',recentSearches:[],dismissedNudges:{}},JSON.parse(localStorage.getItem(UXLS))||{});}catch(e){return {lastSeenVer:'',recentSearches:[],dismissedNudges:{}};}}
+let UX=loadUX();
+function saveUX(){try{localStorage.setItem(UXLS,JSON.stringify(UX));}catch(e){}}
+const FIRST_VISIT=!(DB.prefs&&DB.prefs.view);
+if(FIRST_VISIT&&(window.innerWidth||1200)<700)PREFS.view='cards';      // mobile-first default view
+
+// "what's worth your attention" predicates
+function isFresh(x){return daysSince(x.lastSignal)<=7;}                 // a fresh signal this week
+function isMover(x){return x.delta!==0||isFresh(x);}
+// "My adds" = user-created (`c<timestamp>`) or review-confirmed (`rev-…`) records.
+// NB: `c` must be followed by a digit so real candidate ids like "cruz" don't match.
+const QUICK={movers:{label:'Movers',f:isMover},declared:{label:'Declared',f:x=>x.tier===5},myadds:{label:'My adds',f:x=>/^(c\d|rev-)/.test(String(x.id))}};
+
+// microinteraction feedback helpers (all motion <200ms, purposeful)
+let _toastT=null;
+function toast(msg,isErr){const t=$('#toast');if(!t)return;t.textContent=msg;t.className='toast on'+(isErr?' err':'');clearTimeout(_toastT);_toastT=setTimeout(function(){t.className='toast'+(isErr?' err':'');},1600);}
+function flashRow(id){const el=[].slice.call(document.querySelectorAll('[data-id]')).find(function(e){return e.dataset.id===id;});if(el){el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');}}
+function shake(el){if(!el)return;el.classList.add('shake');setTimeout(function(){el.classList.remove('shake');},220);}
+function pop(el){if(!el)return;el.classList.add('pop');setTimeout(function(){el.classList.remove('pop');},170);}
+function fadePanel(){const map={board:'#boardPanel',cards:'#cardsPanel',review:'#reviewPanel'};const el=$(map[PREFS.view]);if(el){el.classList.remove('fadein');void el.offsetWidth;el.classList.add('fadein');}}
 
 /* ---------- derived ---------- */
 function enrich(c){
@@ -360,6 +416,7 @@ function filtered(){
   if(PREFS.bucket) r=r.filter(x=>x.bucket===PREFS.bucket);
   if(PREFS.conf) r=r.filter(x=>x.confRank>=+PREFS.conf);
   if(PREFS.q){const q=PREFS.q.toLowerCase(); r=r.filter(x=>(x.name+' '+x.role).toLowerCase().includes(q));}
+  if(PREFS.quick&&QUICK[PREFS.quick]) r=r.filter(QUICK[PREFS.quick].f);
   const dir=PREFS.dir==='asc'?1:-1;
   r.sort((a,b)=>{
     let va=a[PREFS.sort],vb=b[PREFS.sort];
@@ -391,6 +448,7 @@ function renderStats(){
   ];
   $('#stats').innerHTML=cards.map(c=>`<div class="stat"><div class="n">${c.n}</div><div class="l"><span class="dot" style="background:${c.c}"></span>${c.l}</div></div>`).join('');
   $('#counter').textContent=`${r.length} names · ${r.filter(x=>daysSince(x.lastSignal)<=14).length} moved this fortnight`;
+  $('#moversCount').textContent=r.filter(isMover).length||'';
 }
 
 function tierBadge(x){return `<span class="tier" style="background:${TIERS[x.tier].c}">${x.statusLabel}</span>`;}
@@ -404,7 +462,7 @@ function renderBoard(){
     <tr class="row" data-id="${x.id}">
       <td class="rank">${i+1}</td>
       <td><span class="pbar" style="background:${partyColor(x.party)}"></span>
-          <span class="nm">${esc(x.name)}${x.pollLead?`<span class="pollLead">★</span>`:''}<span class="role">${esc(x.role)}</span></span></td>
+          <span class="nm">${esc(x.name)}${isFresh(x)?`<span class="newdot" title="New signal this week"></span>`:''}${x.pollLead?`<span class="pollLead">★</span>`:''}<span class="role">${esc(x.role)}</span></span></td>
       <td>${esc(x.party)}</td>
       <td>${tierBadge(x)}</td>
       <td class="scoreCell">${x.score}<span class="track"><i style="width:${x.score}%;background:${TIERS[x.tier].c}"></i></span></td>
@@ -422,7 +480,7 @@ function renderCards(){
   $('#cards').innerHTML=r.map(x=>`
     <div class="card" data-id="${x.id}">
       <span class="accent" style="background:${partyColor(x.party)}"></span>
-      <div class="ch"><div><div class="nm2">${esc(x.name)}</div><div class="role2">${esc(x.role)}</div></div>${tierBadge(x)}</div>
+      <div class="ch"><div><div class="nm2">${esc(x.name)}${isFresh(x)?`<span class="newdot" title="New signal this week"></span>`:''}</div><div class="role2">${esc(x.role)}</div></div>${tierBadge(x)}</div>
       <div class="sig">${esc(x.headline)}</div>
       <div class="foot"><div class="scoreBig" style="color:${TIERS[x.tier].c}">${x.score}</div>
         <div style="text-align:right">${deltaHTML(x.delta)}<br>${confHTML(x.conf)}</div></div>
@@ -463,7 +521,23 @@ function renderReview(){
     </div>`;
   }).join('')||`<div class="reviewEmpty">Nothing in the review queue. 🎉</div>`;
 }
-function renderAll(){renderStats();renderBoard();renderCards();renderReview();renderFeed();renderLegend();syncControls();}
+function renderQuick(){
+  const all=records();
+  $('#quickbar').innerHTML=Object.keys(QUICK).map(function(k){
+    const n=all.filter(QUICK[k].f).length;
+    return `<span class="qchip${PREFS.quick===k?' on':''}" data-quick="${k}" role="button" tabindex="0">${QUICK[k].label}<span class="qn">${n}</span></span>`;
+  }).join('');
+}
+function renderHints(){const dl=$('#qhints'); if(dl) dl.innerHTML=(UX.recentSearches||[]).map(s=>`<option value="${esc(s)}">`).join('');}
+function renderNudge(){
+  const n=$('#nudge'); if(!n) return;
+  if(!FIRST_VISIT && UX.lastSeenVer && UX.lastSeenVer!==GENERATED_AT && !UX.dismissedNudges[GENERATED_AT]){
+    const m=records().filter(isMover).length;
+    n.innerHTML=`Updated since your last visit — <b>${m}</b> mover${m===1?'':'s'} this week.<button class="btn" id="showMovers" style="margin-left:auto">Show movers</button><span class="x" id="nudgeX" title="Dismiss">×</span>`;
+    n.classList.remove('hide');
+  } else { n.classList.add('hide'); }
+}
+function renderAll(){renderStats();renderQuick();renderBoard();renderCards();renderReview();renderFeed();renderLegend();syncControls();}
 
 /* ---------- drawer ---------- */
 function openDrawer(id){
@@ -501,7 +575,9 @@ function openDrawer(id){
 }
 const ALLKEYS=['declared','exploratory','consideringQuote','softConsidering','earlyState','donors','staffing','mediaBlitz','endorsedOther','ruledOut','barred'];
 function editForm(id){
-  const c=id?DB.records.find(x=>x.id===id):{id:'',name:'',party:'Democrat',role:'',bucket:'considering',keys:[],conf:'Medium',delta:0,lastSignal:TODAY.toISOString().slice(0,10),headline:'',why:'',quote:'',tags:[]};
+  // anticipatory defaults for a NEW candidate: inherit the lane/bucket the user is
+  // currently filtering by, and stamp today's date — fewer fields to touch.
+  const c=id?DB.records.find(x=>x.id===id):{id:'',name:'',party:(PREFS.party.length===1?PREFS.party[0]:'Democrat'),role:'',bucket:(PREFS.bucket||'considering'),keys:[],conf:'Medium',delta:0,lastSignal:TODAY.toISOString().slice(0,10),headline:'',why:'',quote:'',tags:[]};
   $('#drawerInner').innerHTML=`
     <div class="dh"><span class="x" data-close>×</span><h2 style="font-size:19px">${id?'Edit':'Add'} candidate</h2></div>
     <div class="body form">
@@ -539,10 +615,13 @@ function editForm(id){
   $('#f-date').addEventListener('input',upd); upd();
 }
 function saveForm(id){
+  const nameEl=$('#f-name'); const nm=nameEl.value.trim();
+  if(!nm){ shake(nameEl); nameEl.classList.add('f-err'); nameEl.focus&&nameEl.focus(); return; }  // error feedback
+  nameEl.classList.remove('f-err');
   const keys=[...document.querySelectorAll('.f-key:checked')].map(e=>e.value);
   const rec={
     id:id||('c'+Date.now()),
-    name:$('#f-name').value.trim()||'Untitled',
+    name:nm,
     role:$('#f-role').value.trim(),
     party:$('#f-party').value, bucket:$('#f-bucket').value,
     keys, conf:$('#f-conf').value, delta:parseInt($('#f-delta').value)||0,
@@ -552,9 +631,9 @@ function saveForm(id){
   };
   const i=DB.records.findIndex(x=>x.id===id);
   if(i>=0)DB.records[i]=rec; else DB.records.push(rec);
-  save(); renderAll(); closeDrawer();
+  save(); renderAll(); closeDrawer(); toast(id?'Saved':'Added'); flashRow(rec.id);   // success feedback
 }
-function delRec(id){ DB.records=DB.records.filter(x=>x.id!==id); save(); renderAll(); closeDrawer(); }
+function delRec(id){ DB.records=DB.records.filter(x=>x.id!==id); save(); renderAll(); closeDrawer(); toast('Removed'); }
 
 function showDrawer(){$('#drawer').classList.add('on');$('#scrim').classList.add('on');}
 function closeDrawer(){$('#drawer').classList.remove('on');$('#scrim').classList.remove('on');}
@@ -568,6 +647,7 @@ function syncControls(){
   $('#boardPanel').classList.toggle('hide',PREFS.view!=='board');
   $('#cardsPanel').classList.toggle('hide',PREFS.view!=='cards');
   $('#reviewPanel').classList.toggle('hide',PREFS.view!=='review');
+  $('#quickbar').classList.toggle('hide',PREFS.view==='review');
   document.querySelectorAll('.chip.party').forEach(c=>c.classList.toggle('on',PREFS.party.includes(c.dataset.v)));
 }
 function persistPrefs(){DB.prefs=PREFS;save();}
@@ -578,12 +658,13 @@ function init(){
   document.querySelectorAll('.chip.party').forEach(c=>c.addEventListener('click',()=>{
     const v=c.dataset.v; const i=PREFS.party.indexOf(v);
     if(i>=0)PREFS.party.splice(i,1); else PREFS.party.push(v);
-    persistPrefs();renderBoard();renderCards();syncControls();
+    pop(c); persistPrefs();renderBoard();renderCards();syncControls();
   }));
   $('#q').addEventListener('input',e=>{PREFS.q=e.target.value;persistPrefs();renderBoard();renderCards();});
+  $('#q').addEventListener('change',e=>{const v=e.target.value.trim(); if(v.length>=2){UX.recentSearches=[v].concat((UX.recentSearches||[]).filter(s=>s!==v)).slice(0,5);saveUX();renderHints();}});
   $('#bucketSel').addEventListener('change',e=>{PREFS.bucket=e.target.value;persistPrefs();renderBoard();renderCards();});
   $('#confSel').addEventListener('change',e=>{PREFS.conf=e.target.value;persistPrefs();renderBoard();renderCards();});
-  document.querySelectorAll('#viewSeg button').forEach(b=>b.addEventListener('click',()=>{PREFS.view=b.dataset.view;persistPrefs();syncControls();}));
+  document.querySelectorAll('#viewSeg button').forEach(b=>b.addEventListener('click',()=>{PREFS.view=b.dataset.view;persistPrefs();syncControls();fadePanel();}));
   document.querySelectorAll('#board th[data-sort]').forEach(th=>th.addEventListener('click',()=>{
     const s=th.dataset.sort;
     if(PREFS.sort===s)PREFS.dir=PREFS.dir==='asc'?'desc':'asc';
@@ -594,16 +675,22 @@ function init(){
   $('#exportBtn').addEventListener('click',()=>{
     const blob=new Blob([JSON.stringify(DB.records,null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='hat-in-ring-2028.json';a.click();
+    toast('Exported '+DB.records.length+' records');
   });
   $('#exportDecisionsBtn').addEventListener('click',()=>{
     const out=Object.entries(DECISIONS).map(([rid,action])=>({rid,action}));
     const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='review_decisions.json';a.click();
+    toast(out.length?'Exported '+out.length+' decision'+(out.length>1?'s':''):'No decisions yet');
   });
   // delegated clicks
   document.body.addEventListener('click',e=>{
     const row=e.target.closest('[data-id]');
     if(e.target.closest('[data-close]')){closeDrawer();return;}
+    if(e.target.closest('[data-quick]')){const k=e.target.closest('[data-quick]').dataset.quick;PREFS.quick=(PREFS.quick===k?'':k);persistPrefs();renderAll();return;}
+    if(e.target.closest('#showMovers')){PREFS.quick='movers';PREFS.view='board';persistPrefs();$('#nudge').classList.add('hide');renderAll();fadePanel();return;}
+    if(e.target.closest('#nudgeX')){UX.dismissedNudges[GENERATED_AT]=true;saveUX();$('#nudge').classList.add('hide');return;}
+    if(e.target.closest('#resetPrefs')){PREFS=Object.assign({view:'board',party:[],bucket:'',conf:'',q:'',sort:'score',dir:'desc',quick:''});DB.prefs=PREFS;save();renderAll();toast('View preferences reset');return;}
     if(e.target.closest('[data-confirm]')){decide(e.target.closest('[data-confirm]').dataset.confirm,'confirm');return;}
     if(e.target.closest('[data-dismiss]')){decide(e.target.closest('[data-dismiss]').dataset.dismiss,'dismiss');return;}
     if(e.target.closest('[data-save]')!==null){saveForm(e.target.closest('[data-save]').dataset.save||'');return;}
@@ -614,8 +701,15 @@ function init(){
   $('#scrim').addEventListener('click',closeDrawer);
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer();});
 
-  $('#foot').innerHTML=`Manually-maintained tracker — data seeded from public reporting (AP, Reuters, Time, WaPo, ABC, C-SPAN, FEC) as of {{ as_of }} (auto-generated {{ generated_at_human }}). Edits/additions save to this browser only; use <b>Export</b> to back up or port to Notion. <b>Status tier</b> = furthest verifiable step taken; <b>momentum</b> = weighted activity + recency, capped 0–100. Not a live FEC/news feed — see chat notes for wiring options.`;
-  renderAll();
+  $('#foot').innerHTML=`Manually-maintained tracker — data seeded from public reporting (AP, Reuters, Time, WaPo, ABC, C-SPAN, FEC) as of {{ as_of }} (auto-generated {{ generated_at_human }}). Edits/additions save to this browser only; use <b>Export</b> to back up or port to Notion. <b>Status tier</b> = furthest verifiable step taken; <b>momentum</b> = weighted activity + recency, capped 0–100. Not a live FEC/news feed — see chat notes for wiring options. · <span class="resetlink" id="resetPrefs">Reset view</span>`;
+  // drawer swipe-to-dismiss (touch): light resistance + snap on release
+  (function(){var d=$('#drawer'),x0=null;
+    d.addEventListener('touchstart',function(ev){x0=ev.touches[0].clientX;d.style.transition='none';},{passive:true});
+    d.addEventListener('touchmove',function(ev){if(x0==null)return;var dx=Math.max(0,ev.touches[0].clientX-x0);d.style.transform='translateX('+(dx*0.7)+'px)';},{passive:true});
+    d.addEventListener('touchend',function(ev){if(x0==null)return;var dx=ev.changedTouches[0].clientX-x0;d.style.transition='';d.style.transform='';if(dx>90)closeDrawer();x0=null;});
+  })();
+  renderAll(); renderNudge(); renderHints();
+  UX.lastSeenVer=GENERATED_AT; saveUX();          // mark this build as seen
 }
 init();
 </script>
