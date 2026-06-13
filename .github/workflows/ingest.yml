@@ -1,0 +1,75 @@
+name: ingest
+
+on:
+  schedule:
+    - cron: "0 11 * * *"      # daily 11:00 UTC (~6–7am ET)
+  workflow_dispatch: {}        # manual "Run workflow" button
+
+permissions:
+  contents: write              # commit refreshed data back to the repo
+  pages: write                 # deploy the dashboard to GitHub Pages
+  id-token: write              # required by actions/deploy-pages
+
+# Serialize Pages publishes: never let a scheduled run and a manual run deploy
+# at the same time. Don't cancel an in-flight deploy (Pages dislikes that).
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # 1) Ingest only — pulls FEC + news, merges into data/*.json (no HTML yet).
+      #    Missing/empty secret falls back to the rate-limited DEMO_KEY; a failed
+      #    source is caught inside the pipeline so it never kills the run.
+      - name: Ingest signals (FEC + news)
+        env:
+          FEC_API_KEY: ${{ secrets.FEC_API_KEY || 'DEMO_KEY' }}
+        run: python -m hatring.pipeline --fec --news
+
+      # 2) Tests gate the build — if parity/merge/classify break, we never
+      #    publish a bad dashboard.
+      - name: Run tests
+        run: pytest -q
+
+      # 3) Build the public artifact only after tests pass.
+      - name: Build dashboard
+        run: python -m hatring.pipeline --build --out public/index.html
+
+      # 4) Persist the dataset (candidates.json, signals.jsonl, review_queue.json)
+      #    so accumulated signals + curated edits survive to the next run.
+      #    The HTML is republished fresh from the artifact, so it is NOT committed.
+      - name: Commit refreshed data
+        run: |
+          git config user.name  "hat-in-ring-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/
+          git diff --cached --quiet && echo "no data changes" || \
+            git commit -m "chore: daily signal ingest $(date -u +%F)"
+          git push || echo "nothing to push"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: ingest
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
