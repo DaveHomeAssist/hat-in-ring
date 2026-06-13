@@ -279,19 +279,18 @@ def test_delta_equals_momentum_movement(audit):
 # --------------------------------------------------------------------------- #
 # REVIEW-QUEUE DURABILITY (human-in-the-loop)
 # --------------------------------------------------------------------------- #
-@pytest.mark.xfail(strict=True, reason=(
-    "BUG: the review queue is rebuilt only from signals that survive audit "
-    "dedup. A denial/downgrade flagged 'confirm before applying' (or a "
-    "discovery item) is populated during apply_news, which is skipped on any "
-    "rerun because its sid is already in signals.jsonl. So a human-action item "
-    "silently DISAPPEARS from review_queue.json on the next pipeline run, "
-    "before anyone acted on it."))
-def test_review_item_survives_rerun(audit):
+def test_merge_produces_review_per_run_pipeline_persists(audit):
+    """M3 is fixed at the PIPELINE layer, not here. The merge layer (re)produces
+    review items only for signals that are new this run — on a rerun the same sid
+    is audit-deduped, so apply_news is skipped and nothing is re-queued. That's
+    intentional; ``pipeline.reconcile_review`` is what persists the queue across
+    runs (proven in tests/test_review_queue.py). This test pins the merge-layer
+    contract so the two layers stay decoupled."""
     denial = news("person", ["ruledOut"], "person rules out a 2028 run")
     ds1 = Dataset([record(keys=["consideringQuote"])], today=TODAY)
     ds1.update([denial], [], audit)
     assert len(ds1.review) == 1                      # queued on first run
 
     ds2 = Dataset([record(keys=["consideringQuote"])], today=TODAY)
-    ds2.update([denial], [], audit)                  # same item, already in audit
-    assert len(ds2.review) == 1, "review item lost on rerun"
+    ds2.update([denial], [], audit)                  # same sid already in audit
+    assert ds2.review == []                          # not re-produced — pipeline persists it

@@ -162,9 +162,14 @@ def test_review_queue_schema():
             assert k in KNOWN_KEYS, f"{tag}: unknown key {k!r}"
         assert DATE_RX.match(r["date"]), f"{tag}: bad date {r['date']!r}"
         date.fromisoformat(r["date"])  # parseable
-        # only the documented extras are 'note' and 'fec_id'
-        extra = set(r) - required - {"note", "fec_id"}
+        # 'rid'/'kind' are stamped by reconcile_review for cross-run dedup; 'note'/'fec_id'
+        # are the per-item extras for denials / FEC filers.
+        extra = set(r) - required - {"note", "fec_id", "rid", "kind"}
         assert not extra, f"{tag}: unexpected fields {extra}"
+        if "rid" in r:
+            assert re.fullmatch(r"[0-9a-f]{12}", r["rid"]), f"{tag}: bad rid {r['rid']!r}"
+        if "kind" in r:
+            assert r["kind"] in {"discovery", "denial", "fec"}, f"{tag}: bad kind {r['kind']!r}"
 
 
 # ---- signals.jsonl ----------------------------------------------------------

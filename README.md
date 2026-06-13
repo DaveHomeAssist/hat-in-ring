@@ -108,9 +108,30 @@ Three guardrails keep the board trustworthy:
 - **Denials/downgrades are never auto-applied.** An ambiguous headline like
   "Slotkin won't rule out a bid but…" won't flip her to "Ruled out" — the
   `ruledOut`/`barred` signal goes to review for human confirmation (validated
-  against live headlines). Confirm it in the dashboard's Add/Edit drawer.
+  against live headlines). Triage it in the dashboard's **Review** screen.
 
 Manual additions and edits survive future rebuilds (matched by id).
+
+### Review screen + decisions loop
+
+The dashboard's **Review (N)** tab lists everything the pipeline routed to a
+human — discoveries, ambiguous denials, and unmatched FEC filers — instead of
+auto-applying. Each item has **Confirm** (apply the signal to the board) or
+**Dismiss** (drop it). Decisions save in your browser; click **Export decisions**
+to download `review_decisions.json`, commit it to `data/`, and the next rebuild
+applies them:
+
+```
+data/review_queue.json     queued items (persisted across runs, deduped by rid)
+data/review_decisions.json human inbox: [{rid, action}] — consumed + emptied each run
+data/review_resolved.json  resolved rids, so a confirmed/dismissed item never resurfaces
+```
+
+`reconcile_review` (in `pipeline.py`) persists the queue across daily runs — a
+flagged item no longer vanishes before a human acts — applies committed decisions
+idempotently, and fails safe (a corrupt `review_decisions.json` is ignored, not a
+crashed cron run). A `confirm` adds the item's keys to the named person (creating
+a minimal record if new); curated fields are still never overwritten by automation.
 
 ## Gaps / explicit non-goals
 

@@ -25,7 +25,7 @@ import yaml
 from . import fec as fecmod
 from . import news as newsmod
 from . import classify as clf
-from .merge import Dataset
+from .merge import Dataset, review_rid, _review_kind
 from .build import render
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -56,6 +56,94 @@ def _attach_watchlist_fec_ids(records, cfg):
             for fid in c["fec_ids"]:
                 if fid not in r["fec_ids"]:
                     r["fec_ids"].append(fid)
+
+
+def _safe_load(path, default, want_type):
+    """Load JSON, returning `default` on a missing / corrupt / wrong-type file
+    (logging a warning) instead of crashing the whole pipeline run."""
+    if not path.exists():
+        return default
+    try:
+        val = json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        log.warning("review: %s is unreadable (%s); treating as empty", path.name, e)
+        return default
+    if not isinstance(val, want_type):
+        log.warning("review: %s is not a %s; treating as empty", path.name, want_type.__name__)
+        return default
+    return val
+
+
+def reconcile_review(ds, today) -> bool:
+    """Persist the review queue across runs and apply human decisions.
+
+    The queue is the human-in-the-loop control, so it must NOT be lost between
+    daily runs (the previous behaviour). We:
+      * load the prior queue + the resolved-set, backfilling rid/kind on legacy items;
+      * union it with this run's new review items, deduped by rid, dropping anything
+        already resolved;
+      * consume data/review_decisions.json ([{rid, action}]): `confirm` applies the
+        item to the dataset, `dismiss` just drops it; both mark the rid resolved so it
+        never resurfaces (idempotent — re-submitting the same decisions is a no-op).
+
+    Returns True if a confirmed decision mutated the dataset (so candidates.json is
+    rewritten). Always rewrites review_queue.json + review_resolved.json.
+    """
+    qpath = DATA / "review_queue.json"
+    rpath = DATA / "review_resolved.json"
+    dpath = DATA / "review_decisions.json"
+
+    # Fail SAFE on a corrupt/hand-edited file (review_decisions.json is committed by
+    # humans) — log and treat as empty rather than crashing the whole unattended run.
+    prior = _safe_load(qpath, [], list)
+    resolved = set(_safe_load(rpath, [], list))
+    decisions = _safe_load(dpath, [], list)
+
+    for it in prior:                       # backfill ids on legacy/hand-written items
+        if isinstance(it, dict):
+            it.setdefault("rid", review_rid(it.get("name", ""), it.get("url", ""), it.get("keys")))
+            it.setdefault("kind", _review_kind(it))
+
+    union: dict[str, dict] = {}
+    for it in prior + ds.review:
+        if not isinstance(it, dict):
+            continue
+        rid = it.get("rid")
+        if rid and rid not in resolved:
+            union.setdefault(rid, it)      # prior copy wins on duplicate
+
+    mutated = False
+    consumed = False
+    for d in decisions:
+        if not isinstance(d, dict):
+            continue
+        rid, action = d.get("rid"), d.get("action")
+        if not rid or rid in resolved or action not in ("confirm", "dismiss"):
+            continue
+        consumed = True
+        if action == "confirm":
+            item = union.get(rid)
+            valid = (item is not None and isinstance(item.get("keys"), list)
+                     and item.get("keys") and (item.get("name") or "").strip())
+            if not valid:
+                # H2: can't apply (gone, or missing name/keys) -> DON'T resolve; keep
+                # it queued so the human can fix or dismiss it instead of losing it.
+                log.warning("review: cannot confirm %s (missing/invalid item); left queued", rid)
+                continue
+            if ds.apply_review_item(item):
+                mutated = True
+        resolved.add(rid)                  # confirmed-and-applied, or dismissed
+        union.pop(rid, None)
+
+    DATA.mkdir(exist_ok=True)
+    qpath.write_text(json.dumps(list(union.values()), indent=2, ensure_ascii=False))
+    rpath.write_text(json.dumps(sorted(resolved), indent=2))
+    # M4: decisions are single-use — empty the inbox once consumed so a stale committed
+    # "confirm" can't silently re-fire on a future item that reuses the same content rid.
+    if consumed:
+        dpath.write_text("[]\n")
+    log.info("review: %d queued, %d resolved (total)", len(union), len(resolved))
+    return mutated
 
 
 def run(args):
@@ -98,16 +186,24 @@ def run(args):
 
     classified = clf.classify_batch(news_items, watchlist) if news_items else []
 
+    ingest_mode = bool(args.fec or args.news or args.all)
+    dataset_dirty = False
     if fec_signals or classified:
         ds.update(classified, fec_signals, DATA / "signals.jsonl",
                   fec_autocreate=cfg.get("fec_autocreate", False))
+        dataset_dirty = True
+
+    if ingest_mode:
+        # Always reconcile the review queue (persist across runs + apply any pending
+        # human decisions), even when no new signals were fetched this run.
+        if reconcile_review(ds, today):
+            dataset_dirty = True
         DATA.mkdir(exist_ok=True)
-        (DATA / "candidates.json").write_text(json.dumps(ds.records, indent=2, ensure_ascii=False))
-        if ds.review:
-            (DATA / "review_queue.json").write_text(json.dumps(ds.review, indent=2, ensure_ascii=False))
-        log.info("dataset: %d records written", len(ds.records))
-    else:
-        log.info("no new signals fetched; dataset unchanged")
+        if dataset_dirty or not (DATA / "candidates.json").exists():
+            (DATA / "candidates.json").write_text(json.dumps(ds.records, indent=2, ensure_ascii=False))
+            log.info("dataset: %d records written", len(ds.records))
+        else:
+            log.info("dataset unchanged")
 
     if args.build or args.all:
         out = Path(args.out) if args.out else DATA / "dashboard.html"

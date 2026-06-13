@@ -128,6 +128,24 @@ tr.row:hover{background:#fbfaf7}
 footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
 .hide{display:none!important}
 .pollLead{font-size:10px;background:#fff3cd;color:#8a6d00;border:1px solid #f0e0a0;border-radius:5px;padding:1px 6px;margin-left:6px;font-weight:600}
+.segbadge{display:inline-block;min-width:16px;padding:0 5px;margin-left:2px;border-radius:9px;background:var(--rep);color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center}
+.segbadge:empty{display:none}
+.reviewNote{font-size:12px;color:var(--muted);background:#faf9f6;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:12px}
+.reviewNote code{background:#eee;padding:1px 4px;border-radius:4px;font-size:11px}
+.reviewItem{border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:10px;background:#fff}
+.ri-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ri-src{color:var(--muted);font-size:11.5px;margin-left:auto}
+.ri-headline{margin:6px 0 8px;font-size:13.5px;line-height:1.45}
+.ri-keys{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}
+.kchip{font-size:10.5px;background:#eef;color:#33438a;border:1px solid #dfe3f5;border-radius:5px;padding:1px 6px;font-weight:600}
+.ri-act{display:flex;align-items:center;gap:8px}
+.ri-link{font-size:11.5px;color:var(--muted);margin-left:auto;text-decoration:none}
+.kind{font-size:10px;font-weight:700;border-radius:5px;padding:1px 6px;text-transform:uppercase;letter-spacing:.02em}
+.kind.disc{background:#e7f1ff;color:#1f5fb0}
+.kind.den{background:#ffe8e8;color:#b22}
+.kind.fec{background:#ece7ff;color:#5a3fb0}
+.reviewEmpty{color:var(--muted);text-align:center;padding:26px 0;font-size:13px}
+.reviewActions{margin-top:6px;display:flex;align-items:center;gap:10px}
 </style>
 </head>
 <body>
@@ -166,6 +184,7 @@ footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-si
     <div class="seg" id="viewSeg">
       <button data-view="board" class="on">Leaderboard</button>
       <button data-view="cards">Cards</button>
+      <button data-view="review">Review <span class="segbadge" id="reviewCount"></span></button>
     </div>
     <button class="btn" id="addBtn">+ Add</button>
     <button class="btn" id="exportBtn" title="Download data as JSON">Export</button>
@@ -188,6 +207,15 @@ footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);font-si
       <div class="panel hide" id="cardsPanel">
         <h2>Candidate cards <span class="meta" id="cardsMeta"></span></h2>
         <div class="cards" id="cards"></div>
+      </div>
+      <div class="panel hide" id="reviewPanel">
+        <h2>Review queue <span class="meta" id="reviewMeta"></span></h2>
+        <div class="reviewNote">Discoveries and ambiguous denials the pipeline routed here instead of auto-applying. <b>Confirm</b> applies the signal to the board; <b>Dismiss</b> drops it. Decisions save in this browser — click <b>Export decisions</b> and commit <code>data/review_decisions.json</code> to apply them in the next rebuild.</div>
+        <div id="reviewList"></div>
+        <div class="reviewActions">
+          <button class="btn primary" id="exportDecisionsBtn">Export decisions</button>
+          <span class="meta" id="decisionsMeta"></span>
+        </div>
       </div>
     </div>
 
@@ -287,6 +315,9 @@ function score(c){
    keys[] drive both status and score; edit/add persists locally.
    ============================================================ */
 const SEED = {{ seed_json }};
+/* REVIEW QUEUE — discoveries + ambiguous denials the pipeline routed to a human
+   instead of auto-applying. Triage here; Export decisions to apply in the rebuild. */
+const REVIEW = {{ review_json }};
 
 /* ---------- persistence ---------- */
 const LS='hatInRing_v1';
@@ -306,6 +337,13 @@ let DB=load();
 // PREFS.party undefined → filtered() crashes the whole board. Object.assign guarantees
 // every key (party array, sort, dir…) always exists.
 let PREFS=Object.assign({view:'board',party:[],bucket:'',conf:'',q:'',sort:'score',dir:'desc'},DB.prefs||{});
+
+/* ---------- review-queue decisions (local until exported) ---------- */
+const RLS='hatInRing_reviewDecisions_v1';
+function loadDecisions(){ try{return JSON.parse(localStorage.getItem(RLS))||{};}catch(e){return {};} }
+let DECISIONS=loadDecisions();                 // { rid: 'confirm' | 'dismiss' }
+function saveDecisions(){ try{localStorage.setItem(RLS,JSON.stringify(DECISIONS));}catch(e){} }
+function decide(rid,action){ DECISIONS[rid]=action; saveDecisions(); renderReview(); }
 
 /* ---------- derived ---------- */
 function enrich(c){
@@ -405,7 +443,27 @@ function renderLegend(){
     `<div class="li"><span class="sw"><span class="tier" style="background:${o.c};padding:2px 6px">${t}</span></span><span>${({5:'Declared — FEC Form 2 / launch',4:'Exploratory committee / testing-the-waters org',3:'Direct "considering" quote',2:'Positioning — travel, donors, staff, media',1:'Floated / "not ruling out"',0:'Ruled out / ineligible / inactive'})[t]}</span></div>`
   ).join('')+`<div class="note">★ = leads primary polling despite lower status tier (status ≠ support).</div>`;
 }
-function renderAll(){renderStats();renderBoard();renderCards();renderFeed();renderLegend();syncControls();}
+const _KINDS={discovery:['Discovery','disc'],denial:['Denial · confirm','den'],fec:['FEC filer','fec']};
+function kindBadge(k){const [l,c]=_KINDS[k]||['Review','disc'];return `<span class="kind ${c}">${l}</span>`;}
+function reviewPending(){return REVIEW.filter(x=>!DECISIONS[x.rid]);}
+function safeUrl(u){return /^https?:\/\//i.test(u||'')?u:'';}
+function renderReview(){
+  const items=reviewPending();
+  $('#reviewCount').textContent=items.length||'';
+  const decided=Object.keys(DECISIONS).length;
+  $('#reviewMeta').textContent=`${items.length} pending · ${decided} decided`;
+  $('#decisionsMeta').textContent=decided?`${decided} decision${decided>1?'s':''} ready — export & commit`:'no decisions yet';
+  $('#reviewList').innerHTML=items.map(x=>{
+    const url=safeUrl(x.url);
+    return `<div class="reviewItem" data-rid="${esc(x.rid)}">
+      <div class="ri-head"><b>${esc(x.name)}</b> ${kindBadge(x.kind)}<span class="ri-src">${esc(x.source||'')}${x.date?' · '+esc(x.date):''}</span></div>
+      <div class="ri-headline">${esc(x.headline||'')}</div>
+      <div class="ri-keys">${(Array.isArray(x.keys)?x.keys:[]).map(k=>`<span class="kchip">${esc(k)}</span>`).join('')}</div>
+      <div class="ri-act"><button class="btn primary" data-confirm="${esc(x.rid)}">Confirm</button><button class="btn" data-dismiss="${esc(x.rid)}">Dismiss</button>${url?`<a class="ri-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">source ↗</a>`:''}</div>
+    </div>`;
+  }).join('')||`<div class="reviewEmpty">Nothing in the review queue. 🎉</div>`;
+}
+function renderAll(){renderStats();renderBoard();renderCards();renderReview();renderFeed();renderLegend();syncControls();}
 
 /* ---------- drawer ---------- */
 function openDrawer(id){
@@ -509,6 +567,7 @@ function syncControls(){
   document.querySelectorAll('#viewSeg button').forEach(b=>b.classList.toggle('on',b.dataset.view===PREFS.view));
   $('#boardPanel').classList.toggle('hide',PREFS.view!=='board');
   $('#cardsPanel').classList.toggle('hide',PREFS.view!=='cards');
+  $('#reviewPanel').classList.toggle('hide',PREFS.view!=='review');
   document.querySelectorAll('.chip.party').forEach(c=>c.classList.toggle('on',PREFS.party.includes(c.dataset.v)));
 }
 function persistPrefs(){DB.prefs=PREFS;save();}
@@ -536,10 +595,17 @@ function init(){
     const blob=new Blob([JSON.stringify(DB.records,null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='hat-in-ring-2028.json';a.click();
   });
+  $('#exportDecisionsBtn').addEventListener('click',()=>{
+    const out=Object.entries(DECISIONS).map(([rid,action])=>({rid,action}));
+    const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='review_decisions.json';a.click();
+  });
   // delegated clicks
   document.body.addEventListener('click',e=>{
     const row=e.target.closest('[data-id]');
     if(e.target.closest('[data-close]')){closeDrawer();return;}
+    if(e.target.closest('[data-confirm]')){decide(e.target.closest('[data-confirm]').dataset.confirm,'confirm');return;}
+    if(e.target.closest('[data-dismiss]')){decide(e.target.closest('[data-dismiss]').dataset.dismiss,'dismiss');return;}
     if(e.target.closest('[data-save]')!==null){saveForm(e.target.closest('[data-save]').dataset.save||'');return;}
     if(e.target.closest('[data-edit]')){editForm(e.target.closest('[data-edit]').dataset.edit);return;}
     if(e.target.closest('[data-del]')){if(confirm('Remove this candidate?'))delRec(e.target.closest('[data-del]').dataset.del);return;}

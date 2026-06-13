@@ -15,8 +15,10 @@ Human-curated fields (why, role, bucket overrides) are never overwritten by
 automation — automation only *adds* keys and refreshes the latest signal.
 """
 from __future__ import annotations
+import hashlib
 import json
 import logging
+import re
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -26,6 +28,27 @@ log = logging.getLogger("hatring.merge")
 
 _KEY_STRENGTH = {"declared": 5, "exploratory": 4, "consideringQuote": 3,
                  "ruledOut": 3, "softConsidering": 2, "barred": 6}
+
+_DOWNGRADE_KEYS = {"ruledOut", "barred"}
+
+
+def review_rid(name: str, url: str, keys) -> str:
+    """Stable id for a review-queue item so it dedups across pipeline runs."""
+    basis = f"{name}|{url}|{','.join(sorted(keys or []))}"
+    return hashlib.sha1(basis.encode("utf-8")).hexdigest()[:12]
+
+
+def _review_kind(item: dict) -> str:
+    if item.get("fec_id"):
+        return "fec"
+    if item.get("note") or (_DOWNGRADE_KEYS & set(item.get("keys") or [])):
+        return "denial"
+    return "discovery"
+
+
+def _slug(name: str) -> str:
+    s = re.sub(r"[^a-z0-9]+", "-", (name or "").lower()).strip("-")
+    return s or "unnamed"
 
 
 def _sig_id(person_id: str, key: str, url: str) -> str:
@@ -185,6 +208,65 @@ class Dataset:
             r["delta"] = after.get(r["id"], 0) - before.get(r["id"], 0)
 
         _append_jsonl(audit, fresh_rows)
+        # Stamp every review item with a stable id + kind so the queue can be
+        # persisted and deduped across runs (see pipeline.reconcile_review).
+        for item in self.review:
+            item.setdefault("rid", review_rid(item.get("name", ""),
+                                              item.get("url", ""), item.get("keys")))
+            item.setdefault("kind", _review_kind(item))
         log.info("merge: %d news applied, %d new audit rows, %d review-queue",
                  applied, len(fresh_rows), len(self.review))
         return self
+
+    # ---- applying a human-confirmed review item ------------------------
+    def apply_review_item(self, item: dict) -> bool:
+        """Apply a review item a human CONFIRMED: add its keys to the named
+        person (creating a minimal record if they're not tracked yet). This is
+        the only path by which a denial/downgrade or a discovery reaches the
+        live dataset — it never happens automatically."""
+        name = (item.get("name") or "").strip()
+        raw_keys = item.get("keys")
+        keys = list(raw_keys) if isinstance(raw_keys, list) else []   # never char-explode a string
+        if not name or not keys:
+            return False
+        rec = next((r for r in self.records if r["name"].lower() == name.lower()), None)
+        if rec is None:
+            # Derive the id from the collision-resistant rid, not a name slug
+            # (distinct names can slug-collide -> duplicate ids); guard uniqueness.
+            base = "rev-" + (item.get("rid") or _slug(name))
+            new_id, n = base, 2
+            while new_id in self.by_id:
+                new_id, n = f"{base}-{n}", n + 1
+            rec = {
+                "id": new_id,
+                "name": name,
+                "party": item.get("party", "Independent"),
+                "role": item.get("role", "Confirmed from review queue"),
+                "bucket": "out" if (_DOWNGRADE_KEYS & set(keys)) else "soft",
+                "keys": [], "conf": item.get("conf", "Medium"), "delta": 0,
+                "lastSignal": (item.get("date") or self.today.isoformat())[:10],
+                "headline": (item.get("headline") or "").strip() or "Confirmed from review queue",
+                "why": "Confirmed from the review queue.",
+                "quote": "", "tags": [t for t in [item.get("source")] if t],
+            }
+            if item.get("fec_id"):
+                rec["fec_ids"] = [item["fec_id"]]
+            self.records.append(rec)
+            self.by_id[rec["id"]] = rec
+        before_tier = _status(rec.get("keys", []))[0]
+        changed = False
+        for k in keys:
+            if k not in rec["keys"]:
+                rec["keys"].append(k)
+                changed = True
+        # A confirmed denial/downgrade must also move bucket so the dashboard's
+        # bucket-driven stats/filter/feed agree with the now-lowered tier.
+        if changed and (_DOWNGRADE_KEYS & set(keys)):
+            rec["bucket"] = "out"
+        after_tier = _status(rec.get("keys", []))[0]
+        if changed and after_tier != before_tier:
+            rec.setdefault("history", []).append(
+                {"date": (item.get("date") or self.today.isoformat())[:10],
+                 "from": before_tier, "to": after_tier,
+                 "reason": "confirmed from review: " + item.get("headline", "")})
+        return changed

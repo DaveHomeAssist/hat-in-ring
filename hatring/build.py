@@ -25,27 +25,38 @@ def _public(records: list[dict]) -> list[dict]:
     return out
 
 
+def _js_literal(obj) -> str:
+    """Serialize to a JS literal that's safe to inject into an inline <script>.
+
+    Jinja autoescape is off for the JS payload, so a value containing "</script>"
+    (e.g. a hostile ingested headline) could break out. Escaping "<" plus the JS
+    line/paragraph separators closes that — all three round-trip identically through
+    the JS string parser. sort_keys keeps the output byte-stable.
+    """
+    s = json.dumps(obj, ensure_ascii=False, sort_keys=True)
+    bs = chr(92)  # literal backslash, built at runtime so the u-escape stays 6 chars
+    return (s.replace("<", bs + "u003c")
+             .replace(chr(0x2028), bs + "u2028")
+             .replace(chr(0x2029), bs + "u2029"))
+
+
 def render(candidates_path: Path, template_dir: Path, out_path: Path,
            built: date | None = None) -> Path:
     built = built or date.today()
-    records = json.loads(Path(candidates_path).read_text())
+    candidates_path = Path(candidates_path)
+    records = json.loads(candidates_path.read_text())
+    # The review queue lives next to candidates.json; inline it so the dashboard's
+    # review screen has data with no external fetch. Absent file -> empty queue.
+    review_path = candidates_path.parent / "review_queue.json"
+    review = json.loads(review_path.read_text()) if review_path.exists() else []
     env = Environment(
         loader=FileSystemLoader(str(template_dir)),
         autoescape=select_autoescape(enabled_extensions=()),  # we inject JS/JSON, not HTML
     )
     tmpl = env.get_template("dashboard.html.j2")
-    # SEED is injected as a raw JS literal with Jinja autoescape off, so a candidate
-    # field containing "</script>" (e.g. a hostile ingested headline) would break out
-    # of the inline <script>. Escape "<" plus the JS line/paragraph separators — all
-    # round-trip identically through the JS string parser. sort_keys keeps output stable.
-    seed_json = json.dumps(_public(records), ensure_ascii=False, sort_keys=True)
-    bs = chr(92)  # literal backslash, built at runtime so the u-escape stays 6 chars
-    seed_json = (seed_json
-                 .replace("<", bs + "u003c")
-                 .replace(chr(0x2028), bs + "u2028")
-                 .replace(chr(0x2029), bs + "u2029"))
     html = tmpl.render(
-        seed_json=seed_json,
+        seed_json=_js_literal(_public(records)),
+        review_json=_js_literal(review),
         # Anchor with Z so the browser parses the build stamp as UTC; otherwise it is
         # read in the viewer's local TZ and daysSince() can flip the 30/90-day recency
         # bands at date-line offsets, diverging from the Python scoring engine.
