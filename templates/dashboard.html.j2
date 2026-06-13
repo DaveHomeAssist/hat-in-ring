@@ -301,7 +301,11 @@ function load(){
 }
 function save(){ try{localStorage.setItem(LS,JSON.stringify(DB));}catch(e){} }
 let DB=load();
-let PREFS=DB.prefs||{view:'board',party:[],bucket:'',conf:'',q:'',sort:'score',dir:'desc'};
+// Merge saved prefs *over* the defaults. NB: an empty saved object ({}) is truthy,
+// so `DB.prefs || {defaults}` would skip the defaults on first visit and leave
+// PREFS.party undefined → filtered() crashes the whole board. Object.assign guarantees
+// every key (party array, sort, dir…) always exists.
+let PREFS=Object.assign({view:'board',party:[],bucket:'',conf:'',q:'',sort:'score',dir:'desc'},DB.prefs||{});
 
 /* ---------- derived ---------- */
 function enrich(c){
