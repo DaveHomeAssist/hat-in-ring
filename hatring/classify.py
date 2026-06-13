@@ -26,9 +26,22 @@ RULES: list[tuple[str, re.Pattern]] = [
     ("declared", re.compile(r"\b(files? (a )?statement of candidacy|enters the race|(announces?|launch(es|ed)?|declares?|kicks? off|mounts?|begins?)( (a|his|her|their))?( 2028)?( presidential| white house)? (bid|campaign|run for president|run|candidacy))\b", re.I)),
     ("exploratory", re.compile(r"\b(exploratory committee|testing[- ]the[- ]waters|forms? an exploratory)\b", re.I)),
     ("consideringQuote", re.compile(r"\b(seriously (considering|weighing|thinking)|(consider(ing)?|weighing|mulling|ey(e|es|eing)|exploring|pursuing) a (2028 )?(presidential |white house )?(run|bid|campaign)|thinking about (it|running|a run|a 2028)|will (consider|look at) (it|that))\b", re.I)),
-    ("softConsidering", re.compile(r"\b(not?(t)? ruling (it )?out|won'?t rule (it )?out|would(n'?t)? rule (it )?out|never say never|nothing off the table|leaves? (the )?door open|open to (a |the )?(run|bid|idea)|hasn'?t ruled out|doesn'?t rule out|keeping (his|her|their) name|keeps? (his|her|their) options)\b", re.I)),
+    # NB: every OPEN "rule out" phrasing (won't / wouldn't / refuses to / can't rule
+    # anything out) lives here AND trips ruledOut's bare "rule out"; classify_item drops
+    # the spurious ruledOut when softConsidering also fired (M1). The (2028 )? slot lets
+    # "open to a 2028 run" match (M5).
+    ("softConsidering", re.compile(r"\b(not?(t)? ruling (it )?out|won'?t rule (it )?out|would(n'?t)? rule (it )?out|refuses? to rule (it )?out|can'?t rule (it|anything|that) out|never say never|nothing off the table|leaves? (the )?door open|open to (a |the )?(2028 )?(presidential )?(run|bid|idea|campaign)|hasn'?t ruled out|doesn'?t rule out|keeping (his|her|their) name|keeps? (his|her|their) options)\b", re.I)),
     ("ruledOut", re.compile(r"\b(not running|won'?t run|rules? out|ruled out|no plans to run|will not (run|seek)|takes? (himself|herself) out|bows? out|not seeking)\b", re.I)),
 ]
+
+# Hedged / second-hand paraphrase markers: a "considering" signal wrapped in these
+# is hearsay, not a firm on-record quote, so it is demoted to softConsidering (M6).
+HEDGE = re.compile(r"\b(sources?\s+say|reportedly|rumou?r|speculat|allies?\s+(say|suggest)|may be (mulling|considering|weighing|eyeing|exploring)|could be (mulling|considering|weighing)|is said to|believed to|hinted|reports?\s+suggest)\b", re.I)
+
+# Parody / satire: never auto-apply to the live board — force the item to review.
+_SATIRE_SOURCES = {"The Onion", "Babylon Bee", "The Babylon Bee", "ClickHole",
+                   "Reductress", "The Hard Times", "Hard Drive"}
+_SATIRE_RX = re.compile(r"\b(the onion|babylon bee|clickhole|reductress|the hard times|hard drive|satire|parody|spoof)\b", re.I)
 BEHAVIOUR: list[tuple[str, re.Pattern]] = [
     ("earlyState", re.compile(r"\b(Iowa|New Hampshire|South Carolina|Nevada)\b")),
     ("donors", re.compile(r"\b(fundrais(er|ing)|donors?|bundlers?|super ?PAC|leadership PAC|PAC)\b", re.I)),
@@ -76,10 +89,21 @@ def _guess_name(title: str) -> str:
 
 
 def _match_person(text: str, watchlist: list[dict]):
-    """Return (id, alias) for the first watchlist person whose alias appears."""
+    """Return (id, alias) for the first watchlist person whose alias appears.
+
+    A bare single-token surname alias (e.g. "Harris") only matches if it is NOT
+    immediately preceded by a different capitalized first name — so "Mike Harris"
+    does not bind to Kamala Harris (M4). A title ("Gov.", "Sen.") or the person's
+    own first name before the surname is fine; sentence-initial use is allowed.
+    """
     for p in watchlist:
+        first = p["name"].split()[0]
         for alias in (p.get("aliases") or [p["name"]]):
-            if re.search(r"\b" + re.escape(alias) + r"\b", text, re.I):
+            for m in re.finditer(r"\b" + re.escape(alias) + r"\b", text, re.I):
+                if " " not in alias:                       # bare surname / single token
+                    prev = re.search(r"([A-Z][a-zA-Z.'\-]+)\s+$", text[:m.start()])
+                    if prev and prev.group(1) not in _TITLES and prev.group(1).lower() != first.lower():
+                        continue                            # different person, same surname
                 return p["id"], alias
     return None, None
 
@@ -87,23 +111,38 @@ def _match_person(text: str, watchlist: list[dict]):
 def classify_item(item, watchlist: list[dict]) -> Classified | None:
     text = f"{item.title}. {item.summary}"
     keys: list[str] = []
-    declarative = None
     for key, rx in RULES:
         if rx.search(text):
-            declarative = declarative or key      # first (strongest) declarative
             keys.append(key)
     for key, rx in BEHAVIOUR:
         if rx.search(text):
             keys.append(key)
+
+    # M1: an OPEN "won't / can't / refuses to rule out" reads as softConsidering,
+    # not a denial — drop the spurious ruledOut that the bare "rule out" substring
+    # tripped, so the status is not inverted to its opposite.
+    if "softConsidering" in keys and "ruledOut" in keys:
+        keys = [k for k in keys if k != "ruledOut"]
+    # M6: a hedged / second-hand "considering" paraphrase is hearsay, not a firm
+    # on-record quote — demote it from consideringQuote (tier 3) to softConsidering.
+    if "consideringQuote" in keys and HEDGE.search(text):
+        keys = ["softConsidering" if k == "consideringQuote" else k for k in keys]
+    keys = list(dict.fromkeys(keys))                # dedup, preserve order
     if not keys:
         return None                                 # no political signal -> drop
 
-    # confidence = min(source ceiling, signal-strength tier)
+    # strongest remaining declarative drives confidence (RULES are strength-ordered)
+    declarative = next((k for k, _ in RULES if k in keys), None)
     sig_conf = {5: "Very high", 4: "High", 3: "High", 2: "Medium"}.get(
         STRENGTH.get(declarative, 0), "Low")
     confidence = _min_conf(item.confidence_ceiling, sig_conf)
 
     pid, alias = _match_person(text, watchlist)
+    # Parody/satire never auto-applies to the live board: force it to review
+    # (discovery) and cap confidence to Noise, even for a matched watchlist person.
+    satire = bool(_SATIRE_RX.search(text)) or item.source in _SATIRE_SOURCES
+    if satire:
+        confidence = "Noise"
     return Classified(
         person_id=pid,
         name_guess=alias or _guess_name(item.title),
@@ -113,7 +152,7 @@ def classify_item(item, watchlist: list[dict]) -> Classified | None:
         confidence=confidence,
         headline=item.title.strip(),
         url=item.url, source=item.source, date=item.published,
-        matched_alias=alias, discovery=(pid is None),
+        matched_alias=alias, discovery=(pid is None) or satire,
         tags=[item.source] if item.source else [],
     )
 

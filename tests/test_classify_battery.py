@@ -215,7 +215,7 @@ def test_bug_wont_rule_out_collides_with_ruledout():
     records by routing ruledOut to review, but a discovery item is mislabeled.)
     """
     c = classify_item(mk("Vance won't rule out a 2028 run"), WATCH)
-    assert set(c.keys) == {"ruledOut", "softConsidering"}   # contradictory pair
+    assert c.keys == ["softConsidering"]   # M1 FIXED: open posture, spurious ruledOut dropped
 
 
 def test_bug_refuses_to_rule_out_is_pure_false_ruledout():
@@ -228,7 +228,7 @@ def test_bug_refuses_to_rule_out_is_pure_false_ruledout():
     POSITIVE on ruledOut simultaneously.
     """
     c = classify_item(mk("Steve Bannon refuses to rule out a 2028 run"), WATCH)
-    assert c.keys == ["ruledOut"]
+    assert c.keys == ["softConsidering"]   # M1 FIXED: 'refuses to rule out' is an OPEN posture
 
 
 def test_bug_open_to_a_YEAR_run_is_dropped():
@@ -240,8 +240,8 @@ def test_bug_open_to_a_YEAR_run_is_dropped():
     inserted ('a 2028 run') breaks the match -> item DROPPED. Phrasing-fragile
     false negative.
     """
-    assert classify_item(mk("Khanna is open to a 2028 run"), WATCH) is None
-    # control: the same intent WITHOUT the year DOES classify
+    assert "softConsidering" in classify_item(mk("Khanna is open to a 2028 run"), WATCH).keys  # M5 FIXED: year slot
+    # control: the same intent WITHOUT the year still classifies
     assert "softConsidering" in classify_item(mk("Khanna is open to a run in 2028"), WATCH).keys
 
 
@@ -253,7 +253,7 @@ def test_bug_cant_rule_anything_out_is_dropped():
     ACTUAL (asserted): no rule matches 'rule ANYTHING out' -> item DROPPED.
     A real 'considering' signal is silently lost (false negative).
     """
-    assert classify_item(mk("Pritzker: I can't rule anything out for 2028"), WATCH) is None
+    assert "softConsidering" in classify_item(mk("Pritzker: I can't rule anything out for 2028"), WATCH).keys  # M5 FIXED
 
 
 # ----------------------------------------------------------------------------
@@ -302,8 +302,8 @@ def test_bug_parody_on_watchlisted_person_not_flagged():
                          source="Reuters"), WATCH)
     assert c.keys == ["declared"]
     assert c.person_id == "newsom"
-    assert c.discovery is False
-    assert c.confidence == "Very high"
+    assert c.discovery is True            # PARODY FIXED: forced to review, never auto-applied
+    assert c.confidence == "Noise"
 
 
 def test_bug_parody_unknown_name_only_saved_by_discovery():
@@ -329,8 +329,8 @@ def test_bug_hedged_paraphrase_classified_as_firm_considering():
     """
     c = classify_item(mk("Sources say Newsom may be mulling a 2028 run, allies suggest",
                          source="Politico"), WATCH)
-    assert c.keys == ["consideringQuote"]
-    assert c.confidence == "High"        # no discount for hedging
+    assert c.keys == ["softConsidering"]   # M6 FIXED: hedged hearsay demoted from tier 3
+    assert c.confidence == "Medium"
 
 
 # ----------------------------------------------------------------------------
@@ -347,7 +347,7 @@ def test_bug_ambiguous_denial_gets_contradictory_keys():
     classify level. (Containment exists only downstream in merge.)
     """
     c = classify_item(mk("Cruz won't rule out 2028 but has no current plans to run"), WATCH)
-    assert set(c.keys) == {"ruledOut", "softConsidering"}
+    assert "ruledOut" not in c.keys and "softConsidering" in c.keys  # M1 FIXED: open wins
 
 
 # ----------------------------------------------------------------------------
@@ -363,5 +363,5 @@ def test_bug_short_alias_matches_wrong_person():
     record is updated and the item never reaches discovery review.
     """
     c = classify_item(mk("Mike Harris is seriously considering a 2028 run for city council"), WATCH)
-    assert c.person_id == "harris"       # wrong: it's not Kamala Harris
-    assert c.discovery is False
+    assert c.person_id is None           # M4 FIXED: 'Mike Harris' is not Kamala Harris
+    assert c.discovery is True
