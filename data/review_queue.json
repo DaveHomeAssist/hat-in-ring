@@ -36,5 +36,41 @@
     "note": "denial/downgrade — confirm before applying",
     "rid": "da2a5081e2c6",
     "kind": "denial"
+  },
+  {
+    "name": "Arizona Democrat Gallego",
+    "headline": "Arizona Democrat Gallego reportedly considering a presidential run in 2028 - Baltimore Sun",
+    "url": "https://news.google.com/rss/articles/CBMitgFBVV95cUxQc3JwMW9paTIybmY3alVpdWxra21RdUlWZVkzblJVNlYzMXpka3pfRVd4ZEtVVjZFaWx1VG9FNEp3LWR1bW1QMGdqb1BfWlBSeTN0R1pjejhmRXZCdTl0YXdMNEhrbHRGSm5mMk1saG9YX3Z5bkNSN3VmQm5DTG1WVmRZQldCVWdhZmYydG0yWHBjV0xNekl6dzBRVkkxTjZoUGg4bHNBeURzRzZnV3h1d1MtVm5nZw?oc=5",
+    "source": "Baltimore Sun",
+    "date": "2026-04-07",
+    "keys": [
+      "softConsidering"
+    ],
+    "rid": "3e8c27646d33",
+    "kind": "discovery"
+  },
+  {
+    "name": "Is Harris",
+    "headline": "WATCH: Is Harris running in 2028? 'I'm thinking about it' - PBS",
+    "url": "https://news.google.com/rss/articles/CBMilAFBVV95cUxNem1tVFpWdlpMTFBCaVhnem84eGpjUFhscUhBdUNlZmFoSlFmVWxkcFRMOUY3MVduLTlQbl9vay1tWFZ0Y2piT01YY0JENkpTcFZLeExZaEdoSWhYb0ljV0ppb3RFWERIZGpsLWQ5ZVlDdDJfQng1MVZiMDI2YS1Ral9hRVJBQ2FjdDk0RThQT0JSODBL0gGaAUFVX3lxTE9LYlZRYkhQX1dLZUJBY1lJamFKQ0xHdmZRTGVRcXd1QmszWWdmV0VyZ1J4ZmEwem5rZjFjMS1nVjJtWjUzeFgycUhRem9hSHBxTEZMVFA0dll3ZmZibjRMcGl1cElKdS16WVRoNnRTR3U2TFZoVHAxZk1nYl9nTWFXaEpTV0pnZkd6SzRFTktIN2xCc09EbGpRemc?oc=5",
+    "source": "PBS",
+    "date": "2026-04-10",
+    "keys": [
+      "consideringQuote"
+    ],
+    "rid": "4146852c8827",
+    "kind": "discovery"
+  },
+  {
+    "name": "Thomas Massie",
+    "headline": "Thomas Massie files statement of candidacy for 2028 election - MSN",
+    "url": "https://news.google.com/rss/articles/CBMisgFBVV95cUxQZVhxVFh5RE5kS2llUEZCZmIzV21IV2YzVHJCSnFTcllXeUZSdkFDZ2RudGRtVXI2cktfZEZfY0JvQ0dhZGZZa3htcTU0XzFVeGVlNzIzNklkc1QyMTV2NkxycFhWZ0gtdHJucEtuRkFmemZlR0d3eXRwczdvYmpiSXZHNlNtUzhkZUhmaHJLSkItUlRTbmJZWEdodGRFWUhlcEdYbXdlTlpfVFU0dGtsR0Zn?oc=5",
+    "source": "MSN",
+    "date": "2026-05-25",
+    "keys": [
+      "declared"
+    ],
+    "rid": "f58d6d5b1564",
+    "kind": "discovery"
   }
 ]
