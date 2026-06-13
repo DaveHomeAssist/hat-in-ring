@@ -23,5 +23,18 @@
     ],
     "rid": "9ba03055ad43",
     "kind": "discovery"
+  },
+  {
+    "name": "Gretchen Whitmer",
+    "headline": "Michigan Gov. Gretchen Whitmer says she won't run for president in 2028 - PBS",
+    "url": "https://news.google.com/rss/articles/CBMiqwFBVV95cUxQaEszSlZoVi1nRUwzMFFvaDJZcVdQSk03YjBDZTJucE80YmJaLUVZODRKa21ndF9icF9jSk1RVWJmT25VRnBVNU51ZVZFZ2k0NTBUX1Uwdkl4eHQ0c1RZWWlQd0NzWmFxT2Fqc1hBMkIyblJualA4UXVpM2JRcFQ5bHJEa1U4NUhVRmNXX3R5Xy1feEJKbEJYbFlOZm1DaURMQlpSemhkSlRMNkHSAbABQVVfeXFMUHBycXhLYlg5R2YycmhnNWlvU1lMSHNDWEJZbmpqakFWTmltMWxzNXpMU0ozWjVvTWkxNlZhMXNra2ZSTDlDRVNPamNOTzFabGEtNXlOUTJFNVFCTmp0ZGxianJLTEVwSk13WXpUUkZzWVRpQk9iclBCckVvV3ltNFJZbEZJRDhULXJuWWxQVVNTaGhmR1k1eC1PNHJSdmxfZ2hERkVRWVd2ODFpLTdIZEk?oc=5",
+    "source": "PBS",
+    "date": "2026-05-28",
+    "keys": [
+      "ruledOut"
+    ],
+    "note": "denial/downgrade — confirm before applying",
+    "rid": "da2a5081e2c6",
+    "kind": "denial"
   }
 ]

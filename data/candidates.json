@@ -619,7 +619,7 @@
       "consideringQuote"
     ],
     "conf": "Medium",
-    "delta": 20,
+    "delta": 0,
     "lastSignal": "2026-06-03",
     "pollLead": "GOP poll leader (~35%)",
     "headline": "Downplays it — \"I'm a VP and I like my job\"",
@@ -651,7 +651,7 @@
     "conf": "Low",
     "delta": 0,
     "lastSignal": "2026-05-28",
-    "headline": "Michigan Gov. Gretchen Whitmer says she’s not running for president in 2028 - Yahoo",
+    "headline": "Michigan Gov. Gretchen Whitmer says she won't run for president in 2028 - PBS",
     "why": "Contradictory signals — flagged for source conflict.",
     "quote": "Never say never.",
     "tags": [
