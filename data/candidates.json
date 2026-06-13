@@ -615,10 +615,11 @@
       "donors",
       "staffing",
       "mediaBlitz",
-      "earlyState"
+      "earlyState",
+      "consideringQuote"
     ],
     "conf": "Medium",
-    "delta": 0,
+    "delta": 20,
     "lastSignal": "2026-06-03",
     "pollLead": "GOP poll leader (~35%)",
     "headline": "Downplays it — \"I'm a VP and I like my job\"",
@@ -627,6 +628,14 @@
     "tags": [
       "heir-apparent",
       "downplaying"
+    ],
+    "history": [
+      {
+        "date": "2026-01-14",
+        "from": 2,
+        "to": 3,
+        "reason": "Is Trump’s MAGA ally Steve Bannon eyeing a 2028 Presidential bid? Can he outdo JD Vance - The Economic Times"
+      }
     ]
   },
   {
