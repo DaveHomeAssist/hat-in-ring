@@ -9,9 +9,9 @@
       "declared"
     ],
     "conf": "Very high",
-    "delta": 0,
-    "lastSignal": "2026-02-15",
-    "headline": "Filed FEC Form 2 — declared 2028 campaign",
+    "delta": 15,
+    "lastSignal": "2026-05-26",
+    "headline": "‘Simpsons’ writer Dan Greaney known as ‘The Prophet’ launches run for president - New York Post",
     "why": "Only formally declared major-party filer so far; low-profile.",
     "quote": "",
     "tags": [
@@ -30,7 +30,7 @@
       "mediaBlitz"
     ],
     "conf": "Medium",
-    "delta": 6,
+    "delta": 0,
     "lastSignal": "2026-04-10",
     "headline": "\"All options\" exploratory posture for 2028",
     "why": "Early exploratory lane on the MAGA-enforcement flank.",
@@ -46,12 +46,13 @@
     "role": "2020 LP nominee",
     "bucket": "formal",
     "keys": [
-      "exploratory"
+      "exploratory",
+      "earlyState"
     ],
     "conf": "High",
-    "delta": 8,
-    "lastSignal": "2026-05-12",
-    "headline": "Formed exploratory committee for 2028 LP nomination",
+    "delta": 15,
+    "lastSignal": "2026-05-28",
+    "headline": "Jo Jorgensen: South Carolina Libertarian Eyes 2028 Presidential Bid - FITSNews",
     "why": "Most concrete step on the Libertarian side.",
     "quote": "",
     "tags": [
@@ -94,12 +95,13 @@
       "consideringQuote",
       "donors",
       "staffing",
-      "mediaBlitz"
+      "mediaBlitz",
+      "earlyState"
     ],
     "conf": "High",
-    "delta": -3,
-    "lastSignal": "2026-02-20",
-    "headline": "Has not decided; \"may or may not\" run again",
+    "delta": 20,
+    "lastSignal": "2026-05-10",
+    "headline": "Big donors backed Harris in 2024. For 2028, they’re not so sure - Los Angeles Times",
     "why": "Retains 2024 donor & staff network; leads some rematch polls.",
     "quote": "I have not made a decision… I may or may not.",
     "tags": [
@@ -115,10 +117,11 @@
     "bucket": "considering",
     "keys": [
       "consideringQuote",
-      "mediaBlitz"
+      "mediaBlitz",
+      "softConsidering"
     ],
     "conf": "High",
-    "delta": 14,
+    "delta": 0,
     "lastSignal": "2026-05-30",
     "headline": "\"Of course I'm thinking about it\" — not ruled out",
     "why": "Most explicit yes among Senate Democrats; record-floor-speech visibility.",
@@ -138,7 +141,7 @@
       "mediaBlitz"
     ],
     "conf": "High",
-    "delta": 4,
+    "delta": 0,
     "lastSignal": "2026-05-08",
     "headline": "Open \"under the right circumstances\"; decision after DGA term",
     "why": "Red-state Dem appeal; timeline tied to Governors Assoc. chairmanship.",
@@ -156,12 +159,13 @@
     "bucket": "considering",
     "keys": [
       "consideringQuote",
-      "staffing"
+      "staffing",
+      "donors"
     ],
     "conf": "Medium",
-    "delta": 5,
+    "delta": 10,
     "lastSignal": "2026-02-17",
-    "headline": "Reported to be \"seriously considering\" a 2028 run",
+    "headline": "Trump clash, fundraising boom elevate Mark Kelly’s 2028 presidential prospects - Cronkite News",
     "why": "Swing-state, astronaut/veteran profile draws operative interest.",
     "quote": "",
     "tags": [
@@ -179,7 +183,7 @@
       "consideringQuote"
     ],
     "conf": "High",
-    "delta": 12,
+    "delta": 0,
     "lastSignal": "2026-03-20",
     "headline": "\"We'll look at that after the midterms\"",
     "why": "First clear public timeline from the progressive-pragmatist lane.",
@@ -196,12 +200,14 @@
     "role": "U.S. Senator (AZ)",
     "bucket": "considering",
     "keys": [
-      "consideringQuote"
+      "consideringQuote",
+      "earlyState",
+      "staffing"
     ],
     "conf": "Medium",
-    "delta": 8,
-    "lastSignal": "2026-04-06",
-    "headline": "Shifted from \"no\" to \"we have to look at it\"",
+    "delta": 25,
+    "lastSignal": "2026-06-12",
+    "headline": "Sen. Ruben Gallego Attends Iowa State Fair Amid 2028 Presidential Bid Speculation Gracie Abrams (9SsQDihp8W) - Mshale",
     "why": "Notable upgrade — went from denial to open in weeks.",
     "quote": "We have to look at it.",
     "tags": [
@@ -221,7 +227,7 @@
       "mediaBlitz"
     ],
     "conf": "High",
-    "delta": 6,
+    "delta": 0,
     "lastSignal": "2026-05-01",
     "headline": "\"Can't rule anything out\" for 2028",
     "why": "Self-funding capacity removes the money constraint entirely.",
@@ -240,17 +246,27 @@
     "keys": [
       "softConsidering",
       "mediaBlitz",
-      "donors"
+      "donors",
+      "earlyState",
+      "consideringQuote"
     ],
     "conf": "Medium",
-    "delta": 4,
-    "lastSignal": "2026-05-15",
-    "headline": "Publicly positioning / testing a centrist lane",
+    "delta": 18,
+    "lastSignal": "2026-06-09",
+    "headline": "Rahm Emanuel's uphill climb in New Hampshire tests a 2028 presidential bid - WKMG",
     "why": "Aggressive media tour to project vitality and viability.",
     "quote": "",
     "tags": [
       "centrist",
       "testing"
+    ],
+    "history": [
+      {
+        "date": "2026-05-29",
+        "from": 2,
+        "to": 3,
+        "reason": "Rahm Emanuel says he's mulling a 2028 run for president - WBUR"
+      }
     ]
   },
   {
@@ -263,7 +279,7 @@
       "softConsidering"
     ],
     "conf": "Low",
-    "delta": 2,
+    "delta": 0,
     "lastSignal": "2026-05-20",
     "headline": "Among Dems considering; \"open if needed\"",
     "why": "Outside-lane physician-governor; low national profile.",
@@ -280,16 +296,25 @@
     "bucket": "considering",
     "keys": [
       "earlyState",
-      "donors"
+      "donors",
+      "declared"
     ],
     "conf": "Medium",
-    "delta": 7,
+    "delta": 40,
     "lastSignal": "2026-04-19",
-    "headline": "Quietly exploring / soft-launching a possible bid",
+    "headline": "Mitch Landrieu launches surprise 2028 presidential bid in New Orleans - mezha.net",
     "why": "Behavioral signals (travel, donor outreach) ahead of any quote.",
     "quote": "",
     "tags": [
       "soft-launch"
+    ],
+    "history": [
+      {
+        "date": "2026-04-19",
+        "from": 2,
+        "to": 5,
+        "reason": "Mitch Landrieu launches surprise 2028 presidential bid in New Orleans - mezha.net"
+      }
     ]
   },
   {
@@ -299,10 +324,11 @@
     "role": "U.S. Senator (MI)",
     "bucket": "considering",
     "keys": [
-      "softConsidering"
+      "softConsidering",
+      "earlyState"
     ],
     "conf": "Medium",
-    "delta": 6,
+    "delta": 10,
     "lastSignal": "2026-06-09",
     "headline": "Not set on running, but \"keeping her name in the mix\"",
     "why": "Most recent signal on the board; swing-state freshman senator.",
@@ -311,6 +337,14 @@
       "senate",
       "swing-state",
       "fresh"
+    ],
+    "history": [
+      {
+        "date": "2026-04-08",
+        "from": 1,
+        "to": 2,
+        "reason": "Elissa Slotkin for president? Michigan’s U.S. senator doesn’t rule it out in visit to Iowa - Michigan Advance"
+      }
     ]
   },
   {
@@ -322,12 +356,13 @@
     "keys": [
       "consideringQuote",
       "donors",
-      "staffing"
+      "staffing",
+      "earlyState"
     ],
     "conf": "High",
-    "delta": 5,
-    "lastSignal": "2025-12-22",
-    "headline": "Weighing another run — setting up a clash with Vance",
+    "delta": 20,
+    "lastSignal": "2026-05-04",
+    "headline": "Sen. Ted Cruz addresses 2028 presidential bid while in Iowa - KWTX",
     "why": "2016 infrastructure & donor base; explicit intra-MAGA lane.",
     "quote": "",
     "tags": [
@@ -344,10 +379,11 @@
     "keys": [
       "consideringQuote",
       "donors",
-      "staffing"
+      "staffing",
+      "earlyState"
     ],
     "conf": "Medium",
-    "delta": 3,
+    "delta": 10,
     "lastSignal": "2026-03-24",
     "headline": "Didn't rule it out: \"We'll see… you never know\"",
     "why": "2024 national org still partly intact; term-limited in 2026.",
@@ -367,7 +403,7 @@
       "consideringQuote"
     ],
     "conf": "Medium",
-    "delta": 4,
+    "delta": 0,
     "lastSignal": "2026-04-02",
     "headline": "\"Thinking about it\" — puts odds around 50-50",
     "why": "Libertarian-Republican lane; rare explicit probability.",
@@ -388,7 +424,7 @@
       "mediaBlitz"
     ],
     "conf": "Low",
-    "delta": 2,
+    "delta": 0,
     "lastSignal": "2026-03-30",
     "headline": "Would \"never rule out\" an opportunity to serve",
     "why": "Admin platform raises visibility; non-committal framing.",
@@ -408,7 +444,7 @@
       "softConsidering"
     ],
     "conf": "Low",
-    "delta": 1,
+    "delta": 0,
     "lastSignal": "2026-03-10",
     "headline": "Won't rule out governor — or president — in 2028",
     "why": "Centrist Republican lane; also weighing NE governor.",
@@ -428,7 +464,7 @@
       "mediaBlitz"
     ],
     "conf": "Low",
-    "delta": 3,
+    "delta": 0,
     "lastSignal": "2026-05-22",
     "headline": "Says he is \"seriously considering\" a run",
     "why": "No party structure or office base — celebrity lane.",
@@ -447,12 +483,13 @@
     "keys": [
       "donors",
       "staffing",
-      "mediaBlitz"
+      "mediaBlitz",
+      "earlyState"
     ],
     "conf": "Medium",
-    "delta": 2,
-    "lastSignal": "2026-05-10",
-    "headline": "Hinted at 2028 but stays noncommittal",
+    "delta": 15,
+    "lastSignal": "2026-06-11",
+    "headline": "Pete Buttigieg to give keynote speech at Iowa Democratic event, fueling presidential speculation - LGBTQ Nation",
     "why": "Top-3 in Dem polls on name ID; no explicit \"considering\" yet.",
     "quote": "",
     "tags": [
@@ -471,7 +508,7 @@
       "mediaBlitz"
     ],
     "conf": "Medium",
-    "delta": 3,
+    "delta": 0,
     "lastSignal": "2026-04-28",
     "headline": "Hasn't ruled out higher office; frames ambition as policy",
     "why": "Massive small-dollar base; leads some progressive polls.",
@@ -491,7 +528,7 @@
       "mediaBlitz"
     ],
     "conf": "Medium",
-    "delta": 2,
+    "delta": 0,
     "lastSignal": "2026-05-05",
     "headline": "Cautious, but wants to be \"part of the national debate\"",
     "why": "Marquee swing-state governor; deliberately low-key.",
@@ -511,7 +548,7 @@
       "softConsidering"
     ],
     "conf": "Low",
-    "delta": 1,
+    "delta": 0,
     "lastSignal": "2026-04-15",
     "headline": "\"Nothing off the table,\" while downplaying the odds",
     "why": "Term-ended governor; low probability self-assessment.",
@@ -528,10 +565,11 @@
     "bucket": "soft",
     "keys": [
       "softConsidering",
-      "mediaBlitz"
+      "mediaBlitz",
+      "declared"
     ],
     "conf": "Low",
-    "delta": 2,
+    "delta": 28,
     "lastSignal": "2026-03-18",
     "headline": "Reported mulling 2028; says odds of running are high",
     "why": "Third-party/independent lane outside the two primaries.",
@@ -539,6 +577,14 @@
     "tags": [
       "independent",
       "Forward"
+    ],
+    "history": [
+      {
+        "date": "2025-10-01",
+        "from": 2,
+        "to": 5,
+        "reason": "Andrew Yang launches mobile network to combat phone addiction, talks shutdown and 2028 Democratic primary - ABC7 Bay Area"
+      }
     ]
   },
   {
@@ -551,7 +597,7 @@
       "softConsidering"
     ],
     "conf": "Low",
-    "delta": 1,
+    "delta": 0,
     "lastSignal": "2026-04-20",
     "headline": "Hinted at a 2028 Libertarian run",
     "why": "Celebrity LP lane; no committee yet.",
@@ -570,10 +616,11 @@
     "keys": [
       "donors",
       "staffing",
-      "mediaBlitz"
+      "mediaBlitz",
+      "earlyState"
     ],
     "conf": "Medium",
-    "delta": 0,
+    "delta": 10,
     "lastSignal": "2026-06-03",
     "pollLead": "GOP poll leader (~35%)",
     "headline": "Downplays it — \"I'm a VP and I like my job\"",
@@ -595,9 +642,9 @@
       "mediaBlitz"
     ],
     "conf": "Low",
-    "delta": -2,
-    "lastSignal": "2026-04-12",
-    "headline": "Ruled it out, then walked it back (\"never say never\")",
+    "delta": 5,
+    "lastSignal": "2026-05-28",
+    "headline": "Michigan Gov. Gretchen Whitmer says she's not running for U.S. president in 2028 - CBC",
     "why": "Contradictory signals — flagged for source conflict.",
     "quote": "Never say never.",
     "tags": [
@@ -651,17 +698,26 @@
     "role": "Media figure",
     "bucket": "edge",
     "keys": [
-      "softConsidering"
+      "softConsidering",
+      "consideringQuote"
     ],
     "conf": "Noise",
-    "delta": 0,
-    "lastSignal": "2026-01-20",
-    "headline": "Mused about 2028, didn't fully rule out — no structure",
+    "delta": 18,
+    "lastSignal": "2026-04-28",
+    "headline": "Is Tucker Carlson eyeing a 2028 presidential run? | Arwa Mahdawi - The Guardian",
     "why": "Speculative; included for completeness, low signal value.",
     "quote": "",
     "tags": [
       "media",
       "noise"
+    ],
+    "history": [
+      {
+        "date": "2026-04-28",
+        "from": 1,
+        "to": 3,
+        "reason": "Is Tucker Carlson eyeing a 2028 presidential run? | Arwa Mahdawi - The Guardian"
+      }
     ]
   },
   {
@@ -712,10 +768,11 @@
     "bucket": "out",
     "keys": [
       "endorsedOther",
-      "staffing"
+      "staffing",
+      "earlyState"
     ],
     "conf": "Medium",
-    "delta": 0,
+    "delta": 5,
     "lastSignal": "2026-06-03",
     "headline": "Not planning a run; signals support for Vance",
     "why": "Trump floats him as Vance's running mate, not a rival.",
@@ -732,12 +789,13 @@
     "role": "Governor of Maryland",
     "bucket": "out",
     "keys": [
-      "ruledOut"
+      "ruledOut",
+      "consideringQuote"
     ],
     "conf": "High",
     "delta": 0,
-    "lastSignal": "2026-03-15",
-    "headline": "Explicitly says he is not running in 2028",
+    "lastSignal": "2026-06-10",
+    "headline": "Gov. Wes Moore answers 'whether he's considering a run' for President in 2028 - Modern Ghana",
     "why": "Clear denial; often cited as a future-cycle prospect instead.",
     "quote": "I am not running.",
     "tags": [
@@ -754,7 +812,7 @@
       "ruledOut"
     ],
     "conf": "Medium",
-    "delta": -8,
+    "delta": 0,
     "lastSignal": "2026-03-01",
     "headline": "Said yes, then later reporting: no longer considering",
     "why": "Cooled off after initial openness.",
@@ -773,7 +831,7 @@
       "ruledOut"
     ],
     "conf": "Medium",
-    "delta": -6,
+    "delta": 0,
     "lastSignal": "2026-02-10",
     "headline": "Earlier \"may run,\" later \"not thinking about 2028\"",
     "why": "2024 VP nominee who walked back earlier interest.",
@@ -809,12 +867,13 @@
     "role": "Sports media",
     "bucket": "out",
     "keys": [
-      "ruledOut"
+      "ruledOut",
+      "softConsidering"
     ],
     "conf": "Low",
     "delta": 0,
-    "lastSignal": "2026-01-15",
-    "headline": "Entertained a run, later said no plans",
+    "lastSignal": "2026-02-13",
+    "headline": "Stephen A. Smith Tells CBS News He Is Not Ruling Out 2028 Presidential Run: “I’d Love To Be On The Debate Stages Against Some Of These Individuals” - Deadline",
     "why": "Backed away from earlier flirtation.",
     "quote": "",
     "tags": [
