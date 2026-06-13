@@ -334,6 +334,10 @@ function filtered(){
 
 /* ---------- render ---------- */
 const $=s=>document.querySelector(s);
+// Escape every untrusted record field before it goes into innerHTML. Headlines,
+// quotes and names flow in from live news/FEC ingest and the add/edit form, so a
+// payload like <img src=x onerror=...> would otherwise execute on render.
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function partyColor(p){return PARTYC[p]||'var(--other)';}
 
 function renderStats(){
@@ -353,7 +357,7 @@ function renderStats(){
 
 function tierBadge(x){return `<span class="tier" style="background:${TIERS[x.tier].c}">${x.statusLabel}</span>`;}
 function deltaHTML(d){const cls=d>0?'up':d<0?'dn':'fl';const s=d>0?'▲ +'+d:d<0?'▼ '+d:'– 0';return `<span class="delta ${cls}">${s}</span>`;}
-function confHTML(c){return `<span class="conf"><span class="dotc" style="background:${CONFC[c]}"></span>${c}</span>`;}
+function confHTML(c){return `<span class="conf"><span class="dotc" style="background:${CONFC[c]}"></span>${esc(c)}</span>`;}
 
 function renderBoard(){
   const r=filtered();
@@ -362,8 +366,8 @@ function renderBoard(){
     <tr class="row" data-id="${x.id}">
       <td class="rank">${i+1}</td>
       <td><span class="pbar" style="background:${partyColor(x.party)}"></span>
-          <span class="nm">${x.name}${x.pollLead?`<span class="pollLead">★</span>`:''}<span class="role">${x.role}</span></span></td>
-      <td>${x.party}</td>
+          <span class="nm">${esc(x.name)}${x.pollLead?`<span class="pollLead">★</span>`:''}<span class="role">${esc(x.role)}</span></span></td>
+      <td>${esc(x.party)}</td>
       <td>${tierBadge(x)}</td>
       <td class="scoreCell">${x.score}<span class="track"><i style="width:${x.score}%;background:${TIERS[x.tier].c}"></i></span></td>
       <td>${deltaHTML(x.delta)}</td>
@@ -380,8 +384,8 @@ function renderCards(){
   $('#cards').innerHTML=r.map(x=>`
     <div class="card" data-id="${x.id}">
       <span class="accent" style="background:${partyColor(x.party)}"></span>
-      <div class="ch"><div><div class="nm2">${x.name}</div><div class="role2">${x.role}</div></div>${tierBadge(x)}</div>
-      <div class="sig">${x.headline}</div>
+      <div class="ch"><div><div class="nm2">${esc(x.name)}</div><div class="role2">${esc(x.role)}</div></div>${tierBadge(x)}</div>
+      <div class="sig">${esc(x.headline)}</div>
       <div class="foot"><div class="scoreBig" style="color:${TIERS[x.tier].c}">${x.score}</div>
         <div style="text-align:right">${deltaHTML(x.delta)}<br>${confHTML(x.conf)}</div></div>
     </div>`).join('');
@@ -392,8 +396,8 @@ function renderFeed(){
   $('#feed').innerHTML=r.map(x=>{
     const d=new Date(x.lastSignal).toLocaleDateString('en-US',{month:'short',day:'numeric'});
     return `<div class="it" data-id="${x.id}" style="cursor:pointer">
-      <div class="d">${d} · ${x.party} ${x.delta?'· '+deltaHTML(x.delta):''}</div>
-      <div class="h"><b>${x.name}</b> — ${x.headline}</div></div>`;
+      <div class="d">${d} · ${esc(x.party)} ${x.delta?'· '+deltaHTML(x.delta):''}</div>
+      <div class="h"><b>${esc(x.name)}</b> — ${esc(x.headline)}</div></div>`;
   }).join('');
 }
 function renderLegend(){
@@ -411,24 +415,24 @@ function openDrawer(id){
   $('#drawerInner').innerHTML=`
     <div class="dh">
       <span class="x" data-close>×</span>
-      <h2 style="font-size:20px">${x.name}</h2>
-      <div style="color:var(--muted);font-size:12.5px;margin-top:3px">${x.role} · <span style="color:${partyColor(x.party)};font-weight:600">${x.party}</span></div>
-      <div style="margin-top:9px">${tierBadge(x)} ${confHTML(x.conf)} ${deltaHTML(x.delta)}${x.pollLead?` <span class="pollLead">★ ${x.pollLead}</span>`:''}</div>
+      <h2 style="font-size:20px">${esc(x.name)}</h2>
+      <div style="color:var(--muted);font-size:12.5px;margin-top:3px">${esc(x.role)} · <span style="color:${partyColor(x.party)};font-weight:600">${esc(x.party)}</span></div>
+      <div style="margin-top:9px">${tierBadge(x)} ${confHTML(x.conf)} ${deltaHTML(x.delta)}${x.pollLead?` <span class="pollLead">★ ${esc(x.pollLead)}</span>`:''}</div>
     </div>
     <div class="body">
       <div class="kv">
-        <div class="k">Latest signal</div><div>${x.headline}</div>
-        <div class="k">Why it matters</div><div>${x.why}</div>
+        <div class="k">Latest signal</div><div>${esc(x.headline)}</div>
+        <div class="k">Why it matters</div><div>${esc(x.why)}</div>
         <div class="k">Last signal</div><div>${new Date(x.lastSignal).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})} · ${daysSince(x.lastSignal)} days ago</div>
         <div class="k">Bucket</div><div>${({formal:'Formal (declared/exploratory)',considering:'Actively considering',soft:'Soft / positioning',edge:'Edge / conditional',out:'Ruled out / inactive'})[x.bucket]}</div>
       </div>
-      ${x.quote?`<div class="quote">"${x.quote}"</div>`:''}
+      ${x.quote?`<div class="quote">"${esc(x.quote)}"</div>`:''}
       <div class="break">
         <h4>Why this momentum score?</h4>
         ${bd.map(b=>`<div class="cmp"><span>${b.label}</span><span class="v ${b.w>=0?'pos':'neg'}">${b.w>=0?'+':''}${b.w}</span></div>`).join('')||'<div class="cmp"><span>No active signals</span><span class="v">0</span></div>'}
         <div class="cmp total"><span>Momentum (capped 0–100)</span><span class="v">${total}</span></div>
       </div>
-      ${x.tags&&x.tags.length?`<div class="tagrow">${x.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`:''}
+      ${x.tags&&x.tags.length?`<div class="tagrow">${x.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>`:''}
       <div style="margin-top:18px;display:flex;gap:8px">
         <button class="btn" data-edit="${x.id}">Edit</button>
         <button class="btn" data-del="${x.id}">Delete</button>
@@ -443,8 +447,8 @@ function editForm(id){
   $('#drawerInner').innerHTML=`
     <div class="dh"><span class="x" data-close>×</span><h2 style="font-size:19px">${id?'Edit':'Add'} candidate</h2></div>
     <div class="body form">
-      <label>Name</label><input type="text" id="f-name" value="${c.name||''}">
-      <label>Role / current office</label><input type="text" id="f-role" value="${c.role||''}">
+      <label>Name</label><input type="text" id="f-name" value="${esc(c.name)}">
+      <label>Role / current office</label><input type="text" id="f-role" value="${esc(c.role)}">
       <div style="display:flex;gap:10px">
         <div style="flex:1"><label>Party / lane</label><select id="f-party">${['Democrat','Republican','Libertarian','Independent'].map(p=>`<option ${c.party===p?'selected':''}>${p}</option>`).join('')}</select></div>
         <div style="flex:1"><label>Bucket</label><select id="f-bucket">${[['formal','Formal'],['considering','Considering'],['soft','Soft/positioning'],['edge','Edge'],['out','Ruled out']].map(([v,l])=>`<option value="${v}" ${c.bucket===v?'selected':''}>${l}</option>`).join('')}</select></div>
@@ -456,10 +460,10 @@ function editForm(id){
         <div style="flex:1"><label>7-day delta</label><input type="text" id="f-delta" value="${c.delta||0}"></div>
         <div style="flex:1"><label>Last signal</label><input type="text" id="f-date" value="${c.lastSignal}"></div>
       </div>
-      <label>Latest signal (headline)</label><input type="text" id="f-headline" value="${(c.headline||'').replace(/"/g,'&quot;')}">
-      <label>Why it matters</label><textarea id="f-why">${c.why||''}</textarea>
-      <label>Best quote (optional)</label><textarea id="f-quote">${c.quote||''}</textarea>
-      <label>Tags (comma-separated)</label><input type="text" id="f-tags" value="${(c.tags||[]).join(', ')}">
+      <label>Latest signal (headline)</label><input type="text" id="f-headline" value="${esc(c.headline)}">
+      <label>Why it matters</label><textarea id="f-why">${esc(c.why)}</textarea>
+      <label>Best quote (optional)</label><textarea id="f-quote">${esc(c.quote)}</textarea>
+      <label>Tags (comma-separated)</label><input type="text" id="f-tags" value="${esc((c.tags||[]).join(', '))}">
       <div class="livescore"><span>Live status / momentum</span><span id="f-live" style="font-weight:700"></span></div>
       <div style="display:flex;gap:8px;margin-top:12px">
         <button class="btn primary" data-save="${id||''}">Save</button>

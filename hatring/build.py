@@ -7,6 +7,7 @@ maths). Output is a single hostable .html file with no external data deps.
 from __future__ import annotations
 import json
 import logging
+import re
 from datetime import date, datetime
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -33,9 +34,22 @@ def render(candidates_path: Path, template_dir: Path, out_path: Path,
         autoescape=select_autoescape(enabled_extensions=()),  # we inject JS/JSON, not HTML
     )
     tmpl = env.get_template("dashboard.html.j2")
+    # SEED is injected as a raw JS literal with Jinja autoescape off, so a candidate
+    # field containing "</script>" (e.g. a hostile ingested headline) would break out
+    # of the inline <script>. Escape "<" plus the JS line/paragraph separators — all
+    # round-trip identically through the JS string parser. sort_keys keeps output stable.
+    seed_json = json.dumps(_public(records), ensure_ascii=False, sort_keys=True)
+    bs = chr(92)  # literal backslash, built at runtime so the u-escape stays 6 chars
+    seed_json = (seed_json
+                 .replace("<", bs + "u003c")
+                 .replace(chr(0x2028), bs + "u2028")
+                 .replace(chr(0x2029), bs + "u2029"))
     html = tmpl.render(
-        seed_json=json.dumps(_public(records), ensure_ascii=False),
-        generated_at=json.dumps(built.isoformat() + "T12:00:00"),
+        seed_json=seed_json,
+        # Anchor with Z so the browser parses the build stamp as UTC; otherwise it is
+        # read in the viewer's local TZ and daysSince() can flip the 30/90-day recency
+        # bands at date-line offsets, diverging from the Python scoring engine.
+        generated_at=json.dumps(built.isoformat() + "T12:00:00Z"),
         generated_at_human=datetime.now().strftime("%b %d %Y %H:%M"),
         as_of=built.strftime("%B %-d, %Y"),
     )

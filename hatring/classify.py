@@ -19,7 +19,11 @@ log = logging.getLogger("hatring.classify")
 
 # Ordered rules: (signal_key, compiled regex). First strong match sets status.
 RULES: list[tuple[str, re.Pattern]] = [
-    ("declared", re.compile(r"\b(announces?|launch(es|ed)?|files? (a )?statement of candidacy|enters the race|declares? (a |his |her )?(2028 )?(presidential )?(bid|campaign|run))\b", re.I)),
+    # NB: the verbs that aren't self-evidently about candidacy (announce/launch/declare/
+    # kick off/mount/begin) MUST be anchored to a candidacy noun, else "launches a PAC" or
+    # "announces a book tour" false-fires Declared (tier 5) onto the live board with no
+    # review gate. "files statement of candidacy" / "enters the race" stand alone.
+    ("declared", re.compile(r"\b(files? (a )?statement of candidacy|enters the race|(announces?|launch(es|ed)?|declares?|kicks? off|mounts?|begins?)( (a|his|her|their))?( 2028)?( presidential| white house)? (bid|campaign|run for president|run|candidacy))\b", re.I)),
     ("exploratory", re.compile(r"\b(exploratory committee|testing[- ]the[- ]waters|forms? an exploratory)\b", re.I)),
     ("consideringQuote", re.compile(r"\b(seriously (considering|weighing|thinking)|(consider(ing)?|weighing|mulling|ey(e|es|eing)|exploring|pursuing) a (2028 )?(presidential |white house )?(run|bid|campaign)|thinking about (it|running|a run|a 2028)|will (consider|look at) (it|that))\b", re.I)),
     ("softConsidering", re.compile(r"\b(not?(t)? ruling (it )?out|won'?t rule (it )?out|would(n'?t)? rule (it )?out|never say never|nothing off the table|leaves? (the )?door open|open to (a |the )?(run|bid|idea)|hasn'?t ruled out|doesn'?t rule out|keeping (his|her|their) name|keeps? (his|her|their) options)\b", re.I)),
@@ -103,7 +107,9 @@ def classify_item(item, watchlist: list[dict]) -> Classified | None:
     return Classified(
         person_id=pid,
         name_guess=alias or _guess_name(item.title),
-        keys=sorted(set(keys), key=lambda k: -STRENGTH.get(k, 0)),
+        # Total order (strength desc, then name) so the key list — and the dedup sid
+        # derived from it — is identical across processes regardless of PYTHONHASHSEED.
+        keys=sorted(set(keys), key=lambda k: (-STRENGTH.get(k, 0), k)),
         confidence=confidence,
         headline=item.title.strip(),
         url=item.url, source=item.source, date=item.published,

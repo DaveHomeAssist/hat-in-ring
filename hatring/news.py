@@ -9,11 +9,14 @@ pipeline throttles requests and caches by URL via the signals audit log.
 """
 from __future__ import annotations
 import logging
+import re
 import time
 import urllib.parse
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import feedparser
+
+_TAGS = re.compile(r"<[^>]+>")
 
 log = logging.getLogger("hatring.news")
 RSS = "https://news.google.com/rss/search?q={q}&hl=en-US&gl=US&ceid=US:en"
@@ -64,8 +67,11 @@ def fetch_query(query: str, limit: int = 25) -> list[NewsItem]:
             source = src_obj.title
         elif " - " in title:
             title, source = title.rsplit(" - ", 1)
-        import re as _re
-        summary = _re.sub(r"<[^>]+>", " ", e.get("summary", "")).strip()
+        # Strip any HTML from BOTH title and summary. Title becomes the candidate
+        # headline rendered into the dashboard, so an un-stripped tag here is the
+        # realistic stored-XSS delivery vector (defense-in-depth with render escaping).
+        title = _TAGS.sub(" ", title)
+        summary = _TAGS.sub(" ", e.get("summary", "")).strip()
         items.append(NewsItem(
             title=title.strip(),
             summary=summary,
