@@ -86,6 +86,9 @@ tr.row:hover{background:#fbfaf7}
 .card .role2{color:var(--muted);font-size:11.5px}
 .card .sig{margin:9px 0 8px 6px;font-size:12.5px;color:#333}
 .card .foot{display:flex;justify-content:space-between;align-items:center;margin-left:6px;margin-top:8px}
+.avatar{width:44px;height:44px;border-radius:9px;object-fit:cover;object-position:center top;flex:none;background:#ece9e2;border:1px solid var(--line)}
+.avatarSm{width:26px;height:26px;border-radius:6px;object-fit:cover;object-position:center top;vertical-align:middle;margin-right:8px;background:#ece9e2;border:1px solid var(--line)}
+.dhPortrait{width:62px;height:62px;border-radius:10px;object-fit:cover;object-position:center top;float:right;margin:0 0 8px 12px;background:#ece9e2;border:1px solid var(--line)}
 .scoreBig{font-family:Georgia,serif;font-size:21px;font-weight:600}
 /* feed */
 .feed{padding:6px 0}
@@ -461,7 +464,7 @@ function renderBoard(){
   $('#boardBody').innerHTML=r.map((x,i)=>`
     <tr class="row" data-id="${x.id}">
       <td class="rank">${i+1}</td>
-      <td><span class="pbar" style="background:${partyColor(x.party)}"></span>
+      <td><span class="pbar" style="background:${partyColor(x.party)}"></span>${x.img?`<img class="avatarSm" src="${esc(x.img)}" alt="" loading="lazy">`:''}
           <span class="nm">${esc(x.name)}${isFresh(x)?`<span class="newdot" title="New signal this week"></span>`:''}${x.pollLead?`<span class="pollLead">★</span>`:''}<span class="role">${esc(x.role)}</span></span></td>
       <td>${esc(x.party)}</td>
       <td>${tierBadge(x)}</td>
@@ -480,7 +483,7 @@ function renderCards(){
   $('#cards').innerHTML=r.map(x=>`
     <div class="card" data-id="${x.id}">
       <span class="accent" style="background:${partyColor(x.party)}"></span>
-      <div class="ch"><div><div class="nm2">${esc(x.name)}${isFresh(x)?`<span class="newdot" title="New signal this week"></span>`:''}</div><div class="role2">${esc(x.role)}</div></div>${tierBadge(x)}</div>
+      <div class="ch">${x.img?`<img class="avatar" src="${esc(x.img)}" alt="" loading="lazy">`:''}<div style="flex:1;min-width:0"><div class="nm2">${esc(x.name)}${isFresh(x)?`<span class="newdot" title="New signal this week"></span>`:''}</div><div class="role2">${esc(x.role)}</div></div>${tierBadge(x)}</div>
       <div class="sig">${esc(x.headline)}</div>
       <div class="foot"><div class="scoreBig" style="color:${TIERS[x.tier].c}">${x.score}</div>
         <div style="text-align:right">${deltaHTML(x.delta)}<br>${confHTML(x.conf)}</div></div>
@@ -547,6 +550,7 @@ function openDrawer(id){
   $('#drawerInner').innerHTML=`
     <div class="dh">
       <span class="x" data-close>×</span>
+      ${x.img?`<img class="dhPortrait" src="${esc(x.img)}" alt="${esc(x.name)}">`:''}
       <h2 style="font-size:20px">${esc(x.name)}</h2>
       <div style="color:var(--muted);font-size:12.5px;margin-top:3px">${esc(x.role)} · <span style="color:${partyColor(x.party)};font-weight:600">${esc(x.party)}</span></div>
       <div style="margin-top:9px">${tierBadge(x)} ${confHTML(x.conf)} ${deltaHTML(x.delta)}${x.pollLead?` <span class="pollLead">★ ${esc(x.pollLead)}</span>`:''}</div>

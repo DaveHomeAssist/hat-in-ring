@@ -48,7 +48,9 @@ try {
     renderQuick(); renderStats();
     OUT={T:T,R0:R0,RM:RM,MC:MC,RD:RD,D5:D5,seedAdds:seedAdds,withAdd:withAdd,RC:RC,
       chips:(document.querySelector('#quickbar').innerHTML.match(/data-quick=/g)||[]).length,
-      escaped:!/<(img|script|svg)/i.test(document.querySelector('#boardBody').innerHTML)};
+      // strip the legitimate avatar <img> first, then assert no OTHER tag leaked
+      // (an injected <img onerror=...> from an unescaped field lacks class="avatarSm")
+      escaped:!/<(img|script|svg)/i.test(document.querySelector('#boardBody').innerHTML.replace(/<img class="avatarSm"[^>]*>/g,''))};
   `);
 } catch (e) {
   console.log('FAIL: dashboard threw -> ' + (e && e.message));
