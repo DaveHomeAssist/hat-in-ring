@@ -120,5 +120,18 @@
     ],
     "rid": "30ff84ec27d9",
     "kind": "discovery"
+  },
+  {
+    "name": "Gretchen Whitmer",
+    "headline": "Michigan Gov. Whitmer says she won't run for president in 2028 then backtracks hours later - WSLS",
+    "url": "https://news.google.com/rss/articles/CBMiygFBVV95cUxPU1JqWGxWbXl3aVNGZExyZDRNVDRtLXp1eldGQ05TNlJIeDRjUVA0S3k4XzhEQ2M0dE1seks4THVjVWVpOGFDVzFDMHNlQTZmYl9UeUJraldwaXg3NGo2ZWh0Yk02MWdKVHg0MjAza0FQR3RWdjM2WHpCWWZHZGRDLWxtdGpEbWtab2VCSzNEXzViMGVCZWJDR3ZQdzctUDZLYVQ2eHV4b2hDZXNtRk9HVElVOGo4WHJ3cXRJXzl2cWkwaGFZaFBMMlJ3?oc=5",
+    "source": "WSLS",
+    "date": "2026-05-28",
+    "keys": [
+      "ruledOut"
+    ],
+    "note": "denial/downgrade — confirm before applying",
+    "rid": "e931587826cc",
+    "kind": "denial"
   }
 ]
